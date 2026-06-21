@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { Compass, CheckCircle } from "lucide-react"
+import PlaceAutocomplete from "@/components/maps/PlaceAutocomplete"
+import GoogleMap from "@/components/maps/GoogleMap"
 
 export default function MyFarm() {
   const [session, setSession] = useState<any>(null)
@@ -141,13 +143,15 @@ export default function MyFarm() {
             </div>
             <div>
               <label className="block text-sm font-semibold text-muted-foreground mb-1.5">Region Location</label>
-              <input
-                type="text"
-                required
+              <PlaceAutocomplete
                 value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="w-full bg-slate-900 border border-border rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-primary"
-                placeholder="Nakuru, Kenya"
+                onChange={setLocation}
+                onPlaceSelect={(address, lat, lng) => {
+                  setLocation(address)
+                  setGpsLat(lat.toString())
+                  setGpsLng(lng.toString())
+                }}
+                placeholder="Search farm location..."
               />
             </div>
           </div>
@@ -214,6 +218,16 @@ export default function MyFarm() {
                 className="w-full bg-slate-900 border border-border rounded-lg px-4 py-2 text-sm text-white focus:outline-none"
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold text-muted-foreground">Farm Map Pin</label>
+            <GoogleMap
+              lat={Number(gpsLat) || -1.2921}
+              lng={Number(gpsLng) || 36.8219}
+              label={name || "My Farm"}
+              height="250px"
+            />
           </div>
 
           <button

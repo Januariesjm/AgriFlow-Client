@@ -28,7 +28,7 @@ interface SidebarItem {
 }
 
 interface DashboardSidebarProps {
-  role: "farmer" | "buyer" | "transporter" | "admin"
+  role: "farmer" | "buyer" | "transporter" | "vendor" | "warehouse_owner" | "admin"
 }
 
 export default function DashboardSidebar({ role }: DashboardSidebarProps) {
@@ -74,6 +74,26 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
     { name: "My Earnings", href: `/dashboard/transporter/earnings`, icon: History },
   ]
 
+  const vendorItems: SidebarItem[] = [
+    { name: "Overview", href: `/dashboard/vendor`, icon: Home },
+    { name: "Storefront Profile", href: `/dashboard/vendor/storefront`, icon: Compass },
+    { name: "Inventory Catalog", href: `/dashboard/vendor/products`, icon: ShoppingBag },
+    { name: "Sales Orders", href: `/dashboard/vendor/orders`, icon: FileText },
+    { name: "Wallet & Payouts", href: `/dashboard/vendor/wallet`, icon: Wallet },
+    { name: "Support Center", href: `/dashboard/vendor/support`, icon: HelpCircle },
+    { name: "Account Settings", href: `/dashboard/vendor/settings`, icon: Settings },
+  ]
+
+  const warehouseOwnerItems: SidebarItem[] = [
+    { name: "Overview", href: `/dashboard/warehouse_owner`, icon: Home },
+    { name: "Warehouse Facilities", href: `/dashboard/warehouse_owner/facilities`, icon: Compass },
+    { name: "Storage Bookings", href: `/dashboard/warehouse_owner/bookings`, icon: FileText },
+    { name: "Inbound Logistics", href: `/dashboard/warehouse_owner/logistics`, icon: Truck },
+    { name: "My Earnings & Wallet", href: `/dashboard/warehouse_owner/wallet`, icon: Wallet },
+    { name: "Support Center", href: `/dashboard/warehouse_owner/support`, icon: HelpCircle },
+    { name: "Account Settings", href: `/dashboard/warehouse_owner/settings`, icon: Settings },
+  ]
+
   const adminItems: SidebarItem[] = [
     { name: "Overview", href: `/dashboard/admin`, icon: Home },
     { name: "User Management", href: `/dashboard/admin/users`, icon: Users },
@@ -86,6 +106,8 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
     role === "farmer" ? farmerItems :
     role === "buyer" ? buyerItems :
     role === "transporter" ? transporterItems :
+    role === "vendor" ? vendorItems :
+    role === "warehouse_owner" ? warehouseOwnerItems :
     adminItems
 
   return (

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { Truck, MapPin, Navigation, Calendar, CheckCircle2, AlertCircle, RefreshCw, Plus } from "lucide-react"
+import RouteMap from "@/components/maps/RouteMap"
 
 export default function FarmerLogistics() {
   const [session, setSession] = useState<any>(null)
@@ -14,6 +15,7 @@ export default function FarmerLogistics() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
+  const [selectedRequest, setSelectedRequest] = useState<any>(null)
 
   // Form state
   const [selectedOrderId, setSelectedOrderId] = useState("")
@@ -61,6 +63,9 @@ export default function FarmerLogistics() {
       if (requestsRes.ok) {
         const data = await requestsRes.json()
         setTransportRequests(data.requests || [])
+        if (data.requests && data.requests.length > 0) {
+          setSelectedRequest(data.requests[0])
+        }
       }
     } catch (err) {
       console.error(err)
@@ -267,6 +272,24 @@ export default function FarmerLogistics() {
         </div>
       </div>
 
+      {selectedRequest && (
+        <div className="glass rounded-xl p-6 space-y-4">
+          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+            <Navigation className="h-5 w-5 text-primary" />
+            <span>Active Dispatch Route: TRP-{selectedRequest.id.substring(0, 8).toUpperCase()}</span>
+          </h3>
+          <RouteMap
+            originLat={selectedRequest.pickup_lat}
+            originLng={selectedRequest.pickup_lng}
+            destLat={selectedRequest.delivery_lat}
+            destLng={selectedRequest.delivery_lng}
+            originLabel="Pickup Farm"
+            destLabel="Delivery Depot"
+            height="350px"
+          />
+        </div>
+      )}
+
       {/* Booking History / Status */}
       <div className="glass rounded-xl p-6">
         <div className="flex justify-between items-center mb-6">
@@ -301,7 +324,11 @@ export default function FarmerLogistics() {
               </thead>
               <tbody className="divide-y divide-border/20">
                 {transportRequests.map((r) => (
-                  <tr key={r.id} className="hover:bg-slate-900/40 transition-colors">
+                  <tr
+                    key={r.id}
+                    onClick={() => setSelectedRequest(r)}
+                    className={`hover:bg-slate-900/60 cursor-pointer transition-colors ${selectedRequest?.id === r.id ? "bg-slate-900/40 border-l-2 border-primary" : ""}`}
+                  >
                     <td className="py-3.5 px-4 font-mono text-xs text-white">TRP-{r.id.substring(0, 8).toUpperCase()}</td>
                     <td className="py-3.5 px-4 text-xs font-semibold">{r.distance_km ? `${r.distance_km.toFixed(1)} km` : "Calculating..."}</td>
                     <td className="py-3.5 px-4 text-xs font-bold text-secondary">${r.estimated_cost?.toFixed(2) || "0.00"}</td>
