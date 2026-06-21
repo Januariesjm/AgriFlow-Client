@@ -5,6 +5,8 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Sprout, Lock, Mail, User, Phone, ArrowRight, Shield } from "lucide-react"
 import { supabase } from "@/lib/supabase"
+import PlaceAutocomplete from "@/components/maps/PlaceAutocomplete"
+import GoogleMap from "@/components/maps/GoogleMap"
 
 export default function Register() {
   const router = useRouter()
@@ -15,8 +17,50 @@ export default function Register() {
   const [role, setRole] = useState("farmer")
   const [country, setCountry] = useState("Kenya")
   const [region, setRegion] = useState("")
+  const [addressSearch, setAddressSearch] = useState("")
+  const [gpsLat, setGpsLat] = useState("")
+  const [gpsLng, setGpsLng] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+
+  const handlePlaceSelect = (address: string, lat: number, lng: number, place: any) => {
+    setAddressSearch(address)
+    setGpsLat(lat.toString())
+    setGpsLng(lng.toString())
+
+    let foundCountry = ""
+    let foundRegion = ""
+
+    if (place?.address_components) {
+      for (const component of place.address_components) {
+        const types = component.types || []
+        if (types.includes("country")) {
+          foundCountry = component.long_name
+        }
+        if (
+          types.includes("administrative_area_level_1") ||
+          types.includes("administrative_area_level_2") ||
+          types.includes("locality")
+        ) {
+          foundRegion = component.long_name
+        }
+      }
+    }
+
+    if (foundCountry) {
+      const lower = foundCountry.toLowerCase()
+      if (lower.includes("kenya")) setCountry("Kenya")
+      else if (lower.includes("uganda")) setCountry("Uganda")
+      else if (lower.includes("tanzania")) setCountry("Tanzania")
+      else if (lower.includes("rwanda")) setCountry("Rwanda")
+    }
+
+    if (foundRegion) {
+      setRegion(foundRegion)
+    } else {
+      setRegion(address.split(",")[0])
+    }
+  }
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -162,6 +206,18 @@ export default function Register() {
             </div>
           </div>
 
+          <div>
+            <label className="block text-sm font-semibold text-muted-foreground mb-1.5">
+              Search Business / Farm Address (GPS Autocomplete)
+            </label>
+            <PlaceAutocomplete
+              value={addressSearch}
+              onChange={setAddressSearch}
+              onPlaceSelect={handlePlaceSelect}
+              placeholder="Search address (e.g. Nakuru, Eldoret, Kampala)..."
+            />
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-semibold text-muted-foreground mb-1.5">
@@ -210,6 +266,18 @@ export default function Register() {
               />
             </div>
           </div>
+
+          {gpsLat && gpsLng && (
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-muted-foreground">Location Pin Preview</label>
+              <GoogleMap
+                lat={Number(gpsLat)}
+                lng={Number(gpsLng)}
+                label={fullName || "Your Location"}
+                height="200px"
+              />
+            </div>
+          )}
 
           <button
             type="submit"

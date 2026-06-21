@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react"
 interface PlaceAutocompleteProps {
   value: string
   onChange: (val: string) => void
-  onPlaceSelect: (address: string, lat: number, lng: number) => void
+  onPlaceSelect: (address: string, lat: number, lng: number, placeDetails?: any) => void
   placeholder?: string
   className?: string
 }
@@ -67,7 +67,7 @@ export default function PlaceAutocomplete({
     autocompleteRef.current = new google.maps.places.Autocomplete(inputRef.current, {
       types: ["geocode", "establishment"],
       componentRestrictions: { country: ["KE", "UG", "TZ", "RW"] },
-      fields: ["formatted_address", "geometry"]
+      fields: ["formatted_address", "geometry", "address_components"]
     })
 
     // Listen for place selection
@@ -77,7 +77,7 @@ export default function PlaceAutocomplete({
         const address = place.formatted_address || ""
         const lat = place.geometry.location.lat()
         const lng = place.geometry.location.lng()
-        onPlaceSelect(address, lat, lng)
+        onPlaceSelect(address, lat, lng, place)
       }
     })
 
