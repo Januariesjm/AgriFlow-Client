@@ -2,54 +2,46 @@
 
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
-import { FileText, Phone, Mail, Truck, Compass, CheckCircle } from "lucide-react"
+import { api } from "@/lib/api"
+import { Order } from "@/lib/types"
+import { Session } from "@supabase/supabase-js"
+import { FileText, Phone, Mail } from "lucide-react"
 
 export default function BuyerOrders() {
-  const [session, setSession] = useState<any>(null)
-  const [orders, setOrders] = useState<any[]>([])
+  const [session, setSession] = useState<Session | null>(null)
+  const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
       setSession(session)
       if (session) {
         fetchOrders(session.access_token)
+      } else {
+        setLoading(false)
       }
     })
   }, [])
 
   const fetchOrders = async (token: string) => {
     try {
-      const res = await fetch("http://localhost:4000/api/orders?role=buyer", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setOrders(data.orders || [])
-      }
+      const data = await api.get<{ orders?: Order[] }>("orders?role=buyer", token)
+      setOrders(data?.orders || [])
     } catch (err) {
-      console.error(err)
+      console.error("Failed to fetch buyer orders:", err)
     } finally {
       setLoading(false)
     }
   }
 
   const cancelOrder = async (orderId: string) => {
+    if (!session) return
     if (!confirm("Are you sure you want to cancel this order?")) return
     try {
-      const res = await fetch(`http://localhost:4000/api/orders/${orderId}/status`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ status: "cancelled" }),
-      })
-      if (res.ok) {
-        fetchOrders(session.access_token)
-      }
+      await api.patch(`orders/${orderId}/status`, { status: "cancelled" }, session.access_token)
+      fetchOrders(session.access_token)
     } catch (err) {
-      console.error(err)
+      console.error("Failed to cancel order:", err)
     }
   }
 

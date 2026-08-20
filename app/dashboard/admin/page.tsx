@@ -2,33 +2,29 @@
 
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
-import { Users, ShoppingBag, DollarSign, Sprout, TrendingUp, Award } from "lucide-react"
+import { Users, ShoppingBag, DollarSign, Sprout, Award } from "lucide-react"
+import { fetchAdminStats } from "@/lib/admin"
+import { AdminStats } from "@/lib/schemas"
+import { Session } from "@supabase/supabase-js"
 
 export default function AdminOverview() {
-  const [session, setSession] = useState<any>(null)
-  const [stats, setStats] = useState<any>(null)
+  const [stats, setStats] = useState<AdminStats | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
+    supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
       if (session) {
-        fetchAdminStats(session.access_token)
+        loadStats(session.access_token)
+      } else {
+        setLoading(false)
       }
     })
   }, [])
 
-  const fetchAdminStats = async (token: string) => {
+  const loadStats = async (token: string) => {
     try {
-      const res = await fetch("http://localhost:4000/api/admin/stats", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setStats(data.stats)
-      }
-    } catch (err) {
-      console.error(err)
+      const data = await fetchAdminStats(token)
+      setStats(data)
     } finally {
       setLoading(false)
     }

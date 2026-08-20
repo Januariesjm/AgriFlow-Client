@@ -6,6 +6,11 @@ import Link from "next/link"
 import Header from "@/components/layout/header"
 import Footer from "@/components/layout/footer"
 import { supabase } from "@/lib/supabase"
+import { api } from "@/lib/api"
+import { Product } from "@/lib/types"
+import { TransportCostEstimate, TransportCostEstimateSchema } from "@/lib/schemas"
+import { calculateCropTotal, calculateLandedCost, buildTransportCostQueryParams } from "@/lib/checkout"
+import { Session } from "@supabase/supabase-js"
 import { Sprout, MapPin, Scale, Calendar, ArrowLeft, Truck, DollarSign, ShieldAlert } from "lucide-react"
 
 export default function ProductDetail() {
@@ -13,9 +18,9 @@ export default function ProductDetail() {
   const router = useRouter()
   const id = params.id as string
 
-  const [product, setProduct] = useState<any>(null)
+  const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
-  const [session, setSession] = useState<any>(null)
+  const [session, setSession] = useState<Session | null>(null)
   const [orderQuantity, setOrderQuantity] = useState(1)
   const [orderLoading, setOrderLoading] = useState(false)
   const [orderError, setOrderError] = useState("")
@@ -29,7 +34,7 @@ export default function ProductDetail() {
   const [calcLoading, setCalcLoading] = useState(false)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
       setSession(session)
     })
     fetchProduct()
@@ -37,13 +42,12 @@ export default function ProductDetail() {
 
   const fetchProduct = async () => {
     try {
-      const res = await fetch(`http://localhost:4000/api/products/${id}`)
-      if (res.ok) {
-        const data = await res.json()
+      const data = await api.get<{ product?: Product }>(`products/${id}`)
+      if (data?.product) {
         setProduct(data.product)
       }
     } catch (err) {
-      console.error(err)
+      console.error("Failed to fetch product:", err)
     } finally {
       setLoading(false)
     }
@@ -53,23 +57,25 @@ export default function ProductDetail() {
     if (!product) return
     setCalcLoading(true)
     try {
-      const queryParams = new URLSearchParams({
-        from_lat: product.gps_lat.toString(),
-        from_lng: product.gps_lng.toString(),
-        to_lat: buyerLat,
-        to_lng: buyerLng,
-        weight: orderQuantity.toString(),
-        vehicle_type: "truck",
-      })
+      const queryParams = buildTransportCostQueryParams(
+        product.gps_lat,
+        product.gps_lng,
+        buyerLat,
+        buyerLng,
+        orderQuantity
+      )
 
-      const res = await fetch(`http://localhost:4000/api/transport/cost?${queryParams.toString()}`)
-      if (res.ok) {
-        const data = await res.json()
+      const data = await api.get<TransportCostEstimate>(`transport/cost?${queryParams.toString()}`)
+      const parsed = TransportCostEstimateSchema.safeParse(data)
+      if (parsed.success) {
+        setTransportCost(parsed.data.estimated_cost)
+        setDistance(parsed.data.distance_km)
+      } else if (data && typeof data.estimated_cost === "number") {
         setTransportCost(data.estimated_cost)
         setDistance(data.distance_km)
       }
     } catch (err) {
-      console.error(err)
+      console.error("Failed to calculate transport cost:", err)
     } finally {
       setCalcLoading(false)
     }
@@ -82,34 +88,28 @@ export default function ProductDetail() {
       return
     }
 
+    if (!product) return
+
     setOrderLoading(true)
     setOrderError("")
     try {
-      const res = await fetch("http://localhost:4000/api/orders", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
+      await api.post(
+        "orders",
+        {
           product_id: product.id,
           quantity: orderQuantity,
           delivery_lat: Number(buyerLat),
           delivery_lng: Number(buyerLng),
           delivery_address: `Coordinates: ${buyerLat}, ${buyerLng}`,
-        }),
-      })
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}))
-        throw new Error(errData.error || "Order placement failed")
-      }
+        },
+        session.access_token
+      )
 
       setOrderSuccess(true)
-      // refresh product details
       fetchProduct()
-    } catch (err: any) {
-      setOrderError(err.message)
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Order placement failed"
+      setOrderError(errorMessage)
     } finally {
       setOrderLoading(false)
     }
@@ -141,6 +141,9 @@ export default function ProductDetail() {
       </div>
     )
   }
+
+  const cropTotal = calculateCropTotal(product.price, orderQuantity)
+  const totalLanded = calculateLandedCost(product.price, orderQuantity, transportCost)
 
   return (
     <div className="min-h-screen bg-slate-950 text-foreground flex flex-col">
@@ -255,7 +258,7 @@ export default function ProductDetail() {
                   <div className="bg-slate-900/60 p-4 rounded-lg border border-border/40">
                     <span className="text-xs text-muted-foreground block font-bold mb-1">Landed Cost</span>
                     <span className="text-lg font-black text-secondary">
-                      ${Math.round((product.price * orderQuantity + transportCost) * 100) / 100}
+                      ${totalLanded}
                     </span>
                   </div>
                 </div>
@@ -302,7 +305,7 @@ export default function ProductDetail() {
                   <div className="bg-slate-900/60 p-4 rounded-lg border border-border/40 space-y-2">
                     <div className="flex justify-between text-xs text-muted-foreground">
                       <span>Crop Cost:</span>
-                      <span>${Math.round(product.price * orderQuantity * 100) / 100}</span>
+                      <span>${cropTotal}</span>
                     </div>
                     {transportCost !== null && (
                       <div className="flex justify-between text-xs text-muted-foreground">
@@ -313,7 +316,7 @@ export default function ProductDetail() {
                     <div className="flex justify-between text-sm font-bold text-white border-t border-border/40 pt-2">
                       <span>Total Landed:</span>
                       <span>
-                        ${Math.round((product.price * orderQuantity + (transportCost || 0)) * 100) / 100}
+                        ${totalLanded}
                       </span>
                     </div>
                   </div>

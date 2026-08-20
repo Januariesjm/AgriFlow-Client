@@ -26,21 +26,21 @@ export const api = {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     }),
 
-  post: <T>(path: string, body?: any, token?: string) =>
+  post: <T>(path: string, body?: unknown, token?: string) =>
     request<T>(path, {
       method: "POST",
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: body ? JSON.stringify(body) : undefined,
     }),
 
-  put: <T>(path: string, body?: any, token?: string) =>
+  put: <T>(path: string, body?: unknown, token?: string) =>
     request<T>(path, {
       method: "PUT",
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: body ? JSON.stringify(body) : undefined,
     }),
 
-  patch: <T>(path: string, body?: any, token?: string) =>
+  patch: <T>(path: string, body?: unknown, token?: string) =>
     request<T>(path, {
       method: "PATCH",
       headers: token ? { Authorization: `Bearer ${token}` } : {},

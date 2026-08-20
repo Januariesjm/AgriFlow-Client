@@ -11,17 +11,17 @@ export async function clientApiGet<T>(path: string): Promise<T> {
   return api.get<T>(path, token)
 }
 
-export async function clientApiPost<T>(path: string, body?: any): Promise<T> {
+export async function clientApiPost<T>(path: string, body?: unknown): Promise<T> {
   const token = await getAuthToken()
   return api.post<T>(path, body, token)
 }
 
-export async function clientApiPut<T>(path: string, body?: any): Promise<T> {
+export async function clientApiPut<T>(path: string, body?: unknown): Promise<T> {
   const token = await getAuthToken()
   return api.put<T>(path, body, token)
 }
 
-export async function clientApiPatch<T>(path: string, body?: any): Promise<T> {
+export async function clientApiPatch<T>(path: string, body?: unknown): Promise<T> {
   const token = await getAuthToken()
   return api.patch<T>(path, body, token)
 }
