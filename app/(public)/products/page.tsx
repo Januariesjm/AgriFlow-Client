@@ -1,13 +1,15 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import Link from "next/link"
 import Header from "@/components/layout/header"
 import Footer from "@/components/layout/footer"
+import { api } from "@/lib/api"
+import { Product } from "@/lib/types"
 import { Sprout, MapPin, Scale, Calendar, Search, Filter } from "lucide-react"
 
 export default function Marketplace() {
-  const [products, setProducts] = useState<any[]>([])
+  const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [country, setCountry] = useState("")
@@ -16,11 +18,7 @@ export default function Marketplace() {
   const [minPrice, setMinPrice] = useState("")
   const [maxPrice, setMaxPrice] = useState("")
 
-  useEffect(() => {
-    fetchProducts()
-  }, [country, category, sort])
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
@@ -31,9 +29,8 @@ export default function Marketplace() {
       if (minPrice) params.append("min_price", minPrice)
       if (maxPrice) params.append("max_price", maxPrice)
 
-      const res = await fetch(`http://localhost:4000/api/products?${params.toString()}`)
-      if (res.ok) {
-        const data = await res.json()
+      const data = await api.get<{ products: Product[] }>(`products?${params.toString()}`)
+      if (data?.products) {
         setProducts(data.products)
       }
     } catch (err) {
@@ -41,7 +38,11 @@ export default function Marketplace() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [search, country, category, sort, minPrice, maxPrice])
+
+  useEffect(() => {
+    fetchProducts()
+  }, [fetchProducts])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()

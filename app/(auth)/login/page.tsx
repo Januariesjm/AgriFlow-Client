@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { api } from "@/lib/api"
 import { Sprout, Lock, Mail, ArrowRight } from "lucide-react"
 
 export default function Login() {
@@ -19,7 +20,7 @@ export default function Login() {
     setLoading(true)
 
     try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
+      const { error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
@@ -31,20 +32,7 @@ export default function Login() {
       }
 
       // Call API backend login to synchronize user state & fetch profile role
-      const res = await fetch("http://localhost:4000/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      })
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}))
-        setError(errData.error || "Failed to sync session with backend")
-        setLoading(false)
-        return
-      }
-
-      const body = await res.json()
+      const body = await api.post<{ user?: { role: string } }>("auth/login", { email, password })
       const role = body.user?.role
 
       if (role) {
@@ -52,9 +40,9 @@ export default function Login() {
       } else {
         router.push("/")
       }
-    } catch (err: any) {
-      setError("An unexpected error occurred. Please try again.")
-      console.error(err)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "An unexpected error occurred. Please try again."
+      setError(message)
     } finally {
       setLoading(false)
     }

@@ -3,8 +3,9 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Sprout, Lock, Mail, User, Phone, ArrowRight, Shield } from "lucide-react"
+import { Sprout, Lock, Mail, User, Phone, ArrowRight } from "lucide-react"
 import { supabase } from "@/lib/supabase"
+import { api } from "@/lib/api"
 import PlaceAutocomplete from "@/components/maps/PlaceAutocomplete"
 import GoogleMap from "@/components/maps/GoogleMap"
 
@@ -68,30 +69,16 @@ export default function Register() {
     setLoading(true)
 
     try {
-      // Create user directly via the Express API Backend
-      // This synchronizes Supabase Admin Auth & creates the Profiles record in a single transacted endpoint
-      const res = await fetch("http://localhost:4000/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          password,
-          full_name: fullName,
-          phone,
-          role,
-          country,
-          region,
-        }),
+      await api.post("auth/register", {
+        email,
+        password,
+        full_name: fullName,
+        phone,
+        role,
+        country,
+        region,
       })
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}))
-        setError(errData.error || "Registration failed")
-        setLoading(false)
-        return
-      }
-
-      // Automatically sign in locally using Supabase auth to set local token
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -103,9 +90,9 @@ export default function Register() {
       }
 
       router.push(`/dashboard/${role}`)
-    } catch (err: any) {
-      setError("An unexpected error occurred. Please try again.")
-      console.error(err)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Registration failed"
+      setError(message)
     } finally {
       setLoading(false)
     }

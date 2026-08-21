@@ -1,14 +1,15 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import Link from "next/link"
 import Header from "@/components/layout/header"
 import Footer from "@/components/layout/footer"
 import { supabase } from "@/lib/supabase"
+import { clientApiGet } from "@/lib/api-client"
+import { Profile } from "@/lib/types"
+import { Session } from "@supabase/supabase-js"
 import { 
-  Sprout, 
   TrendingUp, 
-  Scale, 
   Calculator, 
   ArrowRight, 
   ShieldCheck, 
@@ -16,10 +17,8 @@ import {
   Truck,
   Sparkles,
   CheckCircle,
-  HelpCircle
 } from "lucide-react"
 
-// Mock crop list and price per ton
 const CROP_PRICES = [
   { id: "maize", name: "Maize", pricePerTon: 220, unit: "ton" },
   { id: "beans", name: "Beans", pricePerTon: 380, unit: "ton" },
@@ -29,7 +28,6 @@ const CROP_PRICES = [
   { id: "coffee", name: "Coffee Beans", pricePerTon: 1250, unit: "ton" },
 ]
 
-// Mock buyer demands
 const BUYER_DEMANDS = [
   { id: 1, crop: "Maize", qty: 45, unit: "tons", location: "Nairobi, Kenya", targetPrice: 225, urgency: "High" },
   { id: 2, crop: "Beans", qty: 20, unit: "tons", location: "Kampala, Uganda", targetPrice: 390, urgency: "Medium" },
@@ -39,45 +37,38 @@ const BUYER_DEMANDS = [
 ]
 
 export default function SellPage() {
-  const [session, setSession] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
+  const [session, setSession] = useState<Session | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
   
-  // Calculator state
   const [selectedCrop, setSelectedCrop] = useState(CROP_PRICES[0])
   const [quantity, setQuantity] = useState<number>(10)
   const [transportDistance, setTransportDistance] = useState<number>(50)
   
-  // Success state for mock fulfillment
   const [fulfilledId, setFulfilledId] = useState<number | null>(null)
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      if (session?.user) {
-        fetchProfile(session.user.id)
-      }
-    })
-  }, [])
-
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = useCallback(async () => {
     try {
-      const token = (await supabase.auth.getSession()).data.session?.access_token
-      const res = await fetch(`http://localhost:4000/api/profile`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
+      const data = await clientApiGet<{ profile: Profile }>("profile")
+      if (data?.profile) {
         setProfile(data.profile)
       }
     } catch (err) {
       console.error(err)
     }
-  }
+  }, [])
 
-  // Calculate earnings
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+      if (session?.user) {
+        fetchProfile()
+      }
+    })
+  }, [fetchProfile])
+
   const grossEarnings = selectedCrop.pricePerTon * quantity
-  const platformFee = grossEarnings * 0.02 // 2%
-  const transportCostEstimate = quantity * transportDistance * 0.15 // $0.15 per ton-km
+  const platformFee = grossEarnings * 0.02
+  const transportCostEstimate = quantity * transportDistance * 0.15
   const netEarnings = Math.max(0, grossEarnings - platformFee - transportCostEstimate)
 
   const handleFulfill = (id: number) => {
@@ -155,7 +146,6 @@ export default function SellPage() {
             </div>
 
             <div className="space-y-4">
-              {/* Crop select */}
               <div>
                 <label className="block text-xs font-semibold uppercase text-muted-foreground mb-2">
                   Select Crop
@@ -176,7 +166,6 @@ export default function SellPage() {
                 </select>
               </div>
 
-              {/* Quantity Slider */}
               <div>
                 <div className="flex justify-between text-xs font-semibold uppercase text-muted-foreground mb-2">
                   <span>Harvest Quantity</span>
@@ -197,7 +186,6 @@ export default function SellPage() {
                 </div>
               </div>
 
-              {/* Distance Slider */}
               <div>
                 <div className="flex justify-between text-xs font-semibold uppercase text-muted-foreground mb-2">
                   <span>Transport Distance</span>
@@ -219,7 +207,6 @@ export default function SellPage() {
               </div>
             </div>
 
-            {/* Calculations Output */}
             <div className="bg-slate-900/60 rounded-xl p-6 border border-border/40 space-y-4">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Gross Revenue:</span>
@@ -249,7 +236,6 @@ export default function SellPage() {
             <h2 className="text-2xl font-bold text-white">Why Sell on AgriFlow?</h2>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              
               <div className="glass p-6 rounded-xl border border-border/20 flex flex-col space-y-3">
                 <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
                   <Coins className="h-5 w-5 text-emerald-400" />
@@ -289,7 +275,6 @@ export default function SellPage() {
                   List crop details while they grow to secure agreements and crop advances weeks before harvest.
                 </p>
               </div>
-
             </div>
           </div>
 

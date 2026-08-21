@@ -1,54 +1,52 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
+import { clientApiGet } from "@/lib/api-client"
+import { Profile } from "@/lib/types"
+import { Session } from "@supabase/supabase-js"
 import { useRouter, usePathname } from "next/navigation"
 import { Sprout, User, LogOut, LayoutDashboard } from "lucide-react"
 
 export default function Header() {
   const router = useRouter()
   const pathname = usePathname() || ""
-  const [session, setSession] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
+  const [session, setSession] = useState<Session | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [mounted, setMounted] = useState(false)
+
+  const fetchProfile = useCallback(async () => {
+    try {
+      const data = await clientApiGet<{ profile: Profile }>("profile")
+      if (data?.profile) {
+        setProfile(data.profile)
+      }
+    } catch (err) {
+      console.error("Error fetching profile in header:", err)
+    }
+  }, [])
 
   useEffect(() => {
     setMounted(true)
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       if (session?.user) {
-        fetchProfile(session.user.id)
+        fetchProfile()
       }
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
       if (session?.user) {
-        fetchProfile(session.user.id)
+        fetchProfile()
       } else {
         setProfile(null)
       }
     })
 
     return () => subscription.unsubscribe()
-  }, [])
-
-  const fetchProfile = async (userId: string) => {
-    try {
-      const res = await fetch(`http://localhost:4000/api/profile`, {
-        headers: {
-          Authorization: `Bearer ${session?.access_token || (await supabase.auth.getSession()).data.session?.access_token}`,
-        },
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setProfile(data.profile)
-      }
-    } catch (err) {
-      console.error("Error fetching profile in header:", err)
-    }
-  }
+  }, [fetchProfile])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()

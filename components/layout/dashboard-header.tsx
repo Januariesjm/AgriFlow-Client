@@ -1,38 +1,34 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
-import { Bell, User, LogOut, Globe } from "lucide-react"
-import Link from "next/link"
+import { clientApiGet } from "@/lib/api-client"
+import { Profile } from "@/lib/types"
+import { Bell, LogOut, Globe } from "lucide-react"
 
 export default function DashboardHeader() {
   const router = useRouter()
-  const [profile, setProfile] = useState<any>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        fetchProfile(session.user.id, session.access_token)
-      }
-    })
-  }, [])
-
-  const fetchProfile = async (userId: string, token: string) => {
+  const fetchProfile = useCallback(async () => {
     try {
-      const res = await fetch(`http://localhost:4000/api/profile`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-      if (res.ok) {
-        const data = await res.json()
+      const data = await clientApiGet<{ profile: Profile }>("profile")
+      if (data?.profile) {
         setProfile(data.profile)
       }
     } catch (err) {
       console.error("Error fetching profile in dashboard header:", err)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        fetchProfile()
+      }
+    })
+  }, [fetchProfile])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()

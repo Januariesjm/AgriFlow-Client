@@ -4,6 +4,8 @@ import Link from "next/link"
 import Header from "@/components/layout/header"
 import Footer from "@/components/layout/footer"
 import { useState, useEffect } from "react"
+import { api } from "@/lib/api"
+import { Product } from "@/lib/types"
 import { 
   Sprout, 
   TrendingUp, 
@@ -15,6 +17,21 @@ import {
   MapPin,
   Scale
 } from "lucide-react"
+
+interface HomeProduct extends Partial<Product> {
+  id: string
+  name: string
+  category: string
+  price: number
+  unit: string
+  description?: string
+  region?: string
+  country?: string
+  quantity: number
+  image?: string
+  images?: string[]
+  isPlaceholder?: boolean
+}
 
 export default function Home() {
   const priceTicker = [
@@ -73,7 +90,7 @@ export default function Home() {
     },
   ]
 
-  const placeholders = [
+  const placeholders: HomeProduct[] = [
     {
       id: "placeholder-1",
       name: "Premium White Maize",
@@ -142,24 +159,23 @@ export default function Home() {
   ]
 
   const [currentPage, setCurrentPage] = useState(0)
-  const [dbProducts, setDbProducts] = useState<any[]>([])
+  const [dbProducts, setDbProducts] = useState<Product[]>([])
   
   const totalPages = Math.ceil(priceTicker.length / 4)
 
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentPage((prev) => (prev + 1) % totalPages)
-    }, 10000) // 10 seconds
+    }, 10000)
     return () => clearInterval(timer)
   }, [totalPages])
 
   useEffect(() => {
     const fetchLatestProducts = async () => {
       try {
-        const res = await fetch("http://localhost:4000/api/products?limit=5")
-        if (res.ok) {
-          const data = await res.json()
-          setDbProducts(data.products || [])
+        const data = await api.get<{ products: Product[] }>("products?limit=5")
+        if (data?.products) {
+          setDbProducts(data.products)
         }
       } catch (err) {
         console.error("Error fetching latest products on home page:", err)
@@ -168,11 +184,9 @@ export default function Home() {
     fetchLatestProducts()
   }, [])
 
-  // Combine real database products with premium placeholders to ensure exactly 5 are shown
-  const combinedProducts = [...dbProducts, ...placeholders].slice(0, 5)
+  const combinedProducts: HomeProduct[] = [...dbProducts, ...placeholders].slice(0, 5)
 
-  // Get high quality product crop image
-  const getProductImage = (p: any) => {
+  const getProductImage = (p: HomeProduct) => {
     if (p.isPlaceholder && p.image) {
       return p.image
     }
@@ -346,7 +360,7 @@ export default function Home() {
                       </div>
                       <div className="flex items-center space-x-1.5">
                         <Scale className="h-3 w-3 text-primary shrink-0" />
-                        <span>{p.quantity.toLocaleString()} kg available</span>
+                        <span>{p.quantity?.toLocaleString() || 0} kg available</span>
                       </div>
                     </div>
 

@@ -1,26 +1,35 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Header from "@/components/layout/header"
 import Footer from "@/components/layout/footer"
-import { TrendingUp, Truck, DollarSign, Table, HelpCircle } from "lucide-react"
+import { api } from "@/lib/api"
+import { PriceHistory } from "@/lib/types"
+import { TrendingUp, Truck, DollarSign, Table } from "lucide-react"
+
+interface ComparisonItem {
+  country: string
+  avg_price: number
+  transport_estimate: number
+  delivered_cost: number
+}
+
+interface CheapestDelivered extends ComparisonItem {
+  savings_vs_most_expensive: number
+}
 
 export default function PriceIntelligence() {
   const [crop, setCrop] = useState("Maize")
-  const [lat, setLat] = useState("-1.2921") // Nairobi default
+  const [lat, setLat] = useState("-1.2921")
   const [lng, setLng] = useState("36.8219")
-  const [comparisons, setComparisons] = useState<any[]>([])
-  const [cheapest, setCheapest] = useState<any>(null)
+  const [comparisons, setComparisons] = useState<ComparisonItem[]>([])
+  const [cheapest, setCheapest] = useState<CheapestDelivered | null>(null)
   const [loading, setLoading] = useState(false)
-  const [history, setHistory] = useState<any[]>([])
+  const [_history, setHistory] = useState<PriceHistory[]>([])
 
   const crops = ["Maize", "Beans", "Rice", "Tomatoes", "Onions", "Potatoes"]
 
-  useEffect(() => {
-    handleCompare()
-  }, [crop])
-
-  const handleCompare = async () => {
+  const handleCompare = useCallback(async () => {
     setLoading(true)
     try {
       const compareParams = new URLSearchParams({
@@ -29,27 +38,29 @@ export default function PriceIntelligence() {
         buyer_lng: lng,
       })
 
-      const [compareRes, historyRes] = await Promise.all([
-        fetch(`http://localhost:4000/api/prices/compare?${compareParams.toString()}`),
-        fetch(`http://localhost:4000/api/prices/history?product=${crop}`),
+      const [compareData, historyData] = await Promise.all([
+        api.get<{ comparisons: ComparisonItem[]; cheapest_delivered: CheapestDelivered }>(`prices/compare?${compareParams.toString()}`),
+        api.get<{ history: PriceHistory[] }>(`prices/history?product=${crop}`),
       ])
 
-      if (compareRes.ok) {
-        const compareData = await compareRes.json()
-        setComparisons(compareData.comparisons)
-        setCheapest(compareData.cheapest_delivered)
+      if (compareData) {
+        setComparisons(compareData.comparisons || [])
+        setCheapest(compareData.cheapest_delivered || null)
       }
 
-      if (historyRes.ok) {
-        const historyData = await historyRes.json()
-        setHistory(historyData.history)
+      if (historyData) {
+        setHistory(historyData.history || [])
       }
     } catch (err) {
       console.error(err)
     } finally {
       setLoading(false)
     }
-  }
+  }, [crop, lat, lng])
+
+  useEffect(() => {
+    handleCompare()
+  }, [handleCompare])
 
   return (
     <div className="min-h-screen bg-slate-950 text-foreground flex flex-col">
