@@ -95,7 +95,7 @@ export default function WarehouseFacilities() {
   const toggleStatus = (id: string, current: Facility["status"]) => {
     const nextStatus: Facility["status"] = current === "active" ? "full" : current === "full" ? "maintenance" : "active"
     const updated = facilities.map((f) => (f.id === id ? { ...f, status: nextStatus } : f))
-    saveFacilities(updated)
+    setItems(updated)
     setSuccess(`Facility status updated to ${nextStatus}!`)
     setTimeout(() => setSuccess(""), 4000)
   }

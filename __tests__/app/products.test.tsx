@@ -68,4 +68,29 @@ describe("Marketplace Page", () => {
       expect(api.get).toHaveBeenCalledWith(expect.stringContaining("search=Corn"))
     })
   })
+
+  test("triggers refetch on filter dropdown and price changes", async () => {
+    render(<Marketplace />)
+
+    const countrySelect = screen.getByDisplayValue("All Countries")
+    fireEvent.change(countrySelect, { target: { value: "Kenya" } })
+
+    const categorySelect = screen.getByDisplayValue("All Categories")
+    fireEvent.change(categorySelect, { target: { value: "Grains" } })
+
+    const sortSelect = screen.getByDisplayValue("Sort: Newest")
+    fireEvent.change(sortSelect, { target: { value: "price_asc" } })
+
+    const minPriceInput = screen.getByPlaceholderText("Min ($)")
+    fireEvent.change(minPriceInput, { target: { value: "10" } })
+    fireEvent.blur(minPriceInput)
+
+    const maxPriceInput = screen.getByPlaceholderText("Max ($)")
+    fireEvent.change(maxPriceInput, { target: { value: "500" } })
+    fireEvent.blur(maxPriceInput)
+
+    await waitFor(() => {
+      expect(api.get).toHaveBeenCalled()
+    })
+  })
 })
