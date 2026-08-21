@@ -1,4 +1,5 @@
 "use client"
+import { logger } from "@/lib/logger"
 
 import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
@@ -17,7 +18,7 @@ export default function TransporterJobs() {
         setJobs(data.requests)
       }
     } catch (err) {
-      console.error(err)
+      logger.error("DashboardTransporterJobs", "Operation failed", err)
     } finally {
       setLoading(false)
     }
@@ -36,7 +37,7 @@ export default function TransporterJobs() {
       await clientApiPatch(`transport/requests/${jobId}`, { status: "accepted" })
       fetchJobs()
     } catch (err) {
-      console.error(err)
+      logger.error("DashboardTransporterJobs", "Operation failed", err)
     }
   }
 
@@ -45,7 +46,7 @@ export default function TransporterJobs() {
       await clientApiPatch(`transport/requests/${jobId}`, { status: newStatus })
       fetchJobs()
     } catch (err) {
-      console.error(err)
+      logger.error("DashboardTransporterJobs", "Operation failed", err)
     }
   }
 

@@ -1,4 +1,5 @@
 "use client"
+import { logger } from "@/lib/logger"
 
 import { useEffect, useState, useCallback } from "react"
 import Link from "next/link"
@@ -34,7 +35,7 @@ export default function Marketplace() {
         setProducts(data.products)
       }
     } catch (err) {
-      console.error("Error fetching products:", err)
+      logger.error("Products", "Error fetching products:", err)
     } finally {
       setLoading(false)
     }

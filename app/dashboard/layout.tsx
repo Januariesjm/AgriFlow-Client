@@ -1,4 +1,5 @@
 "use client"
+import { logger } from "@/lib/logger"
 
 import { useEffect, useState, useCallback } from "react"
 import { useRouter, usePathname } from "next/navigation"
@@ -34,7 +35,7 @@ export default function DashboardLayout({
         router.push(`/dashboard/${userRole}`)
       }
     } catch (err) {
-      console.error(err)
+      logger.error("DashboardLayout.Tsx", "Operation failed", err)
       router.push("/login")
     } finally {
       setLoading(false)

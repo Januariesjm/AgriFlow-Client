@@ -1,4 +1,5 @@
 "use client"
+import { logger } from "@/lib/logger"
 
 import { useState, useEffect, useCallback } from "react"
 import { api } from "@/lib/api"
@@ -19,7 +20,7 @@ export default function FarmerPrices() {
         setLatestPrices(data.prices)
       }
     } catch (err) {
-      console.error(err)
+      logger.error("DashboardFarmerPrices", "Operation failed", err)
     } finally {
       setLoading(false)
     }

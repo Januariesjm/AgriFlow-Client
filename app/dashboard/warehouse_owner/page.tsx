@@ -1,4 +1,5 @@
 "use client"
+import { logger } from "@/lib/logger"
 
 import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
@@ -42,7 +43,7 @@ export default function WarehouseOverview() {
         setProfile(data.profile)
       }
     } catch (err) {
-      console.error(err)
+      logger.error("DashboardWarehouseOwner", "Operation failed", err)
     }
   }, [])
 
@@ -85,7 +86,7 @@ export default function WarehouseOverview() {
         setBalance(JSON.parse(storedWallet).balance ?? 420.0)
       }
     } catch (err) {
-      console.error(err)
+      logger.error("DashboardWarehouseOwner", "Operation failed", err)
     } finally {
       setLoading(false)
     }

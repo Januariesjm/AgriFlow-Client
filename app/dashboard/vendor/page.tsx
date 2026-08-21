@@ -1,4 +1,5 @@
 "use client"
+import { logger } from "@/lib/logger"
 
 import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
@@ -49,7 +50,7 @@ export default function VendorOverview() {
         setProfile(data.profile)
       }
     } catch (err) {
-      console.error(err)
+      logger.error("DashboardVendor", "Operation failed", err)
     }
   }, [])
 
@@ -88,7 +89,7 @@ export default function VendorOverview() {
       }
       setOrders(orderList)
     } catch (err) {
-      console.error(err)
+      logger.error("DashboardVendor", "Operation failed", err)
     } finally {
       setLoading(false)
     }

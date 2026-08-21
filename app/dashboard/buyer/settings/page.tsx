@@ -1,4 +1,5 @@
 "use client"
+import { logger } from "@/lib/logger"
 
 import { useEffect, useState } from "react"
 import { useSession } from "@/lib/hooks/useSession"
@@ -52,7 +53,7 @@ export default function BuyerSettings() {
           setPriceAlerts(parsed.priceAlerts ?? true)
           setMaxSourcingRange(parsed.maxSourcingRange ?? "250")
         } catch (e) {
-          console.error(e)
+          logger.error("DashboardBuyerSettings", "Operation failed", e)
         }
       }
     }

@@ -1,4 +1,5 @@
 "use client"
+import { logger } from "@/lib/logger"
 
 import { useEffect, useState, useCallback } from "react"
 import Link from "next/link"
@@ -19,7 +20,7 @@ export default function FarmerOverview() {
         setProfile(data.profile)
       }
     } catch (err) {
-      console.error(err)
+      logger.error("DashboardFarmer", "Operation failed", err)
     }
   }, [])
 
@@ -73,7 +74,7 @@ export default function FarmerOverview() {
         available: Math.round(availableSum * 100) / 100,
       })
     } catch (err) {
-      console.error(err)
+      logger.error("DashboardFarmer", "Operation failed", err)
     }
   }, [])
 

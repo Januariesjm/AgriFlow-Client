@@ -1,4 +1,5 @@
 "use client"
+import { logger } from "@/lib/logger"
 
 import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
@@ -51,7 +52,7 @@ export default function BuyerSupport() {
         setOrders(data.orders)
       }
     } catch (err) {
-      console.error(err)
+      logger.error("DashboardBuyerSupport", "Operation failed", err)
     }
   }, [])
 

@@ -1,4 +1,5 @@
 "use client"
+import { logger } from "@/lib/logger"
 
 import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
@@ -48,7 +49,7 @@ export default function FarmerLogistics() {
         }
       }
     } catch (err) {
-      console.error(err)
+      logger.error("DashboardFarmerLogistics", "Operation failed", err)
       setError("Failed to fetch logistics data.")
     } finally {
       setLoading(false)

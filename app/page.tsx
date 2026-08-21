@@ -1,4 +1,5 @@
 "use client"
+import { logger } from "@/lib/logger"
 
 import Link from "next/link"
 import Header from "@/components/layout/header"
@@ -178,7 +179,7 @@ export default function Home() {
           setDbProducts(data.products)
         }
       } catch (err) {
-        console.error("Error fetching latest products on home page:", err)
+        logger.error("Page.Tsx", "Error fetching latest products on home page:", err)
       }
     }
     fetchLatestProducts()

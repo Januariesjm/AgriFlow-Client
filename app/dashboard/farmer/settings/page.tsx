@@ -1,4 +1,5 @@
 "use client"
+import { logger } from "@/lib/logger"
 
 import { useEffect, useState } from "react"
 import { useSession } from "@/lib/hooks/useSession"
@@ -52,7 +53,7 @@ export default function FarmerSettings() {
           setPriceAlerts(parsed.priceAlerts ?? true)
           setWeatherAlerts(parsed.weatherAlerts ?? true)
         } catch (e) {
-          console.error(e)
+          logger.error("DashboardFarmerSettings", "Operation failed", e)
         }
       }
     }

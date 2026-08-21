@@ -1,4 +1,5 @@
 "use client"
+import { logger } from "@/lib/logger"
 
 import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
@@ -44,7 +45,7 @@ export default function WarehouseSettings() {
         setRegion(data.profile.region || "")
       }
     } catch (err) {
-      console.error(err)
+      logger.error("DashboardWarehouseOwnerSettings", "Operation failed", err)
     } finally {
       setLoading(false)
     }

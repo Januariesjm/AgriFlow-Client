@@ -1,4 +1,5 @@
 "use client"
+import { logger } from "@/lib/logger"
 
 import { useEffect, useState, useCallback } from "react"
 import Link from "next/link"
@@ -19,7 +20,7 @@ export default function BuyerOverview() {
         setProfile(data.profile)
       }
     } catch (err) {
-      console.error(err)
+      logger.error("DashboardBuyer", "Operation failed", err)
     }
   }, [])
 
@@ -42,7 +43,7 @@ export default function BuyerOverview() {
         })
       }
     } catch (err) {
-      console.error(err)
+      logger.error("DashboardBuyer", "Operation failed", err)
     }
   }, [])
 

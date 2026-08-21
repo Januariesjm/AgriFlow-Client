@@ -1,4 +1,5 @@
 "use client"
+import { logger } from "@/lib/logger"
 
 import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
@@ -26,7 +27,7 @@ export default function FarmerAnalytics() {
         setProducts(productsData.products)
       }
     } catch (err) {
-      console.error(err)
+      logger.error("DashboardFarmerAnalytics", "Operation failed", err)
     } finally {
       setLoading(false)
     }

@@ -1,4 +1,5 @@
 "use client"
+import { logger } from "@/lib/logger"
 
 import { useState, useEffect, useCallback } from "react"
 import Header from "@/components/layout/header"
@@ -52,7 +53,7 @@ export default function PriceIntelligence() {
         setHistory(historyData.history || [])
       }
     } catch (err) {
-      console.error(err)
+      logger.error("Prices", "Operation failed", err)
     } finally {
       setLoading(false)
     }

@@ -1,4 +1,5 @@
 "use client"
+import { logger } from "@/lib/logger"
 
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
@@ -28,7 +29,7 @@ export default function BuyerOrders() {
       const data = await api.get<{ orders?: Order[] }>("orders?role=buyer", token)
       setOrders(data?.orders || [])
     } catch (err) {
-      console.error("Failed to fetch buyer orders:", err)
+      logger.error("DashboardBuyerOrders", "Failed to fetch buyer orders:", err)
     } finally {
       setLoading(false)
     }
@@ -41,7 +42,7 @@ export default function BuyerOrders() {
       await api.patch(`orders/${orderId}/status`, { status: "cancelled" }, session.access_token)
       fetchOrders(session.access_token)
     } catch (err) {
-      console.error("Failed to cancel order:", err)
+      logger.error("DashboardBuyerOrders", "Failed to cancel order:", err)
     }
   }
 

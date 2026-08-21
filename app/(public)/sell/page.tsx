@@ -1,4 +1,5 @@
 "use client"
+import { logger } from "@/lib/logger"
 
 import { useEffect, useState, useCallback } from "react"
 import Link from "next/link"
@@ -53,7 +54,7 @@ export default function SellPage() {
         setProfile(data.profile)
       }
     } catch (err) {
-      console.error(err)
+      logger.error("Sell", "Operation failed", err)
     }
   }, [])
 

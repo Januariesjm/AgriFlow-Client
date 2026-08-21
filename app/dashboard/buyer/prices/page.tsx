@@ -1,4 +1,5 @@
 "use client"
+import { logger } from "@/lib/logger"
 
 import { useState, useEffect, useCallback } from "react"
 import { api } from "@/lib/api"
@@ -32,7 +33,7 @@ export default function BuyerPrices() {
         setCheapest(data.cheapest_delivered || null)
       }
     } catch (err) {
-      console.error(err)
+      logger.error("DashboardBuyerPrices", "Operation failed", err)
     } finally {
       setLoading(false)
     }

@@ -1,4 +1,5 @@
 "use client"
+import { logger } from "@/lib/logger"
 
 import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
@@ -26,7 +27,7 @@ export default function TransporterOverview() {
         setProfile(data.profile)
       }
     } catch (err) {
-      console.error(err)
+      logger.error("DashboardTransporter", "Operation failed", err)
     }
   }, [])
 
@@ -37,7 +38,7 @@ export default function TransporterOverview() {
         setVehicles(data.vehicles)
       }
     } catch (err) {
-      console.error(err)
+      logger.error("DashboardTransporter", "Operation failed", err)
     }
   }, [])
 

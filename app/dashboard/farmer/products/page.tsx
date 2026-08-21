@@ -1,4 +1,5 @@
 "use client"
+import { logger } from "@/lib/logger"
 
 import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
@@ -34,7 +35,7 @@ export default function MyProducts() {
         setProducts(data.products)
       }
     } catch (err) {
-      console.error(err)
+      logger.error("DashboardFarmerProducts", "Operation failed", err)
     }
   }, [])
 
@@ -50,7 +51,7 @@ export default function MyProducts() {
         }
       }
     } catch (err) {
-      console.error(err)
+      logger.error("DashboardFarmerProducts", "Operation failed", err)
     }
   }, [])
 
@@ -108,7 +109,7 @@ export default function MyProducts() {
       await clientApiDelete(`products/${id}`)
       fetchMyProducts()
     } catch (err) {
-      console.error(err)
+      logger.error("DashboardFarmerProducts", "Operation failed", err)
     }
   }
 
