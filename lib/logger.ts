@@ -3,9 +3,9 @@ export type LogLevel = "info" | "warn" | "error" | "debug"
 export interface LogEntry {
   timestamp: string
   level: LogLevel
-  context: string
+  module: string
   message: string
-  error?: unknown
+  error?: Record<string, unknown> | string
   metadata?: Record<string, unknown>
 }
 
@@ -24,7 +24,7 @@ class Logger {
 
   private createLogEntry(
     level: LogLevel,
-    context: string,
+    moduleName: string,
     message: string,
     error?: unknown,
     metadata?: Record<string, unknown>
@@ -32,37 +32,37 @@ class Logger {
     return {
       timestamp: new Date().toISOString(),
       level,
-      context,
+      module: moduleName,
       message,
       ...(error !== undefined && { error: this.formatError(error) }),
       ...(metadata && { metadata }),
     }
   }
 
-  log(level: LogLevel, context: string, message: string, error?: unknown, metadata?: Record<string, unknown>): LogEntry {
-    const entry = this.createLogEntry(level, context, message, error, metadata)
+  log(level: LogLevel, moduleName: string, message: string, error?: unknown, metadata?: Record<string, unknown>): LogEntry {
+    const entry = this.createLogEntry(level, moduleName, message, error, metadata)
     
-    // In production or development, log structured output
+    // Emit structured JSON object
     const consoleMethod = level === "error" ? console.error : level === "warn" ? console.warn : console.log
-    consoleMethod(`[${entry.timestamp}] [${level.toUpperCase()}] [${context}] ${message}`, entry)
+    consoleMethod(JSON.stringify(entry))
     
     return entry
   }
 
-  info(context: string, message: string, metadata?: Record<string, unknown>): LogEntry {
-    return this.log("info", context, message, undefined, metadata)
+  info(moduleName: string, message: string, metadata?: Record<string, unknown>): LogEntry {
+    return this.log("info", moduleName, message, undefined, metadata)
   }
 
-  warn(context: string, message: string, error?: unknown, metadata?: Record<string, unknown>): LogEntry {
-    return this.log("warn", context, message, error, metadata)
+  warn(moduleName: string, message: string, error?: unknown, metadata?: Record<string, unknown>): LogEntry {
+    return this.log("warn", moduleName, message, error, metadata)
   }
 
-  error(context: string, message: string, error?: unknown, metadata?: Record<string, unknown>): LogEntry {
-    return this.log("error", context, message, error, metadata)
+  error(moduleName: string, message: string, error?: unknown, metadata?: Record<string, unknown>): LogEntry {
+    return this.log("error", moduleName, message, error, metadata)
   }
 
-  debug(context: string, message: string, metadata?: Record<string, unknown>): LogEntry {
-    return this.log("debug", context, message, undefined, metadata)
+  debug(moduleName: string, message: string, metadata?: Record<string, unknown>): LogEntry {
+    return this.log("debug", moduleName, message, undefined, metadata)
   }
 }
 

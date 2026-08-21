@@ -15,22 +15,21 @@ describe("Structured Logger Service", () => {
     jest.restoreAllMocks()
   })
 
-  test("emits formatted info entry", () => {
-    const entry = logger.info("TestContext", "Test info message", { user: "123" })
+  test("emits formatted info entry as structured JSON string", () => {
+    const entry = logger.info("TestModule", "Test info message", { user: "123" })
 
     expect(entry.level).toBe("info")
-    expect(entry.context).toBe("TestContext")
+    expect(entry.module).toBe("TestModule")
     expect(entry.message).toBe("Test info message")
     expect(entry.metadata).toEqual({ user: "123" })
-    expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining("[INFO] [TestContext] Test info message"),
-      entry
-    )
+
+    const expectedJson = JSON.stringify(entry)
+    expect(consoleLogSpy).toHaveBeenCalledWith(expectedJson)
   })
 
   test("emits formatted warn entry with error details", () => {
     const err = new Error("Warning cause")
-    const entry = logger.warn("WarnContext", "Something is unusual", err)
+    const entry = logger.warn("WarnModule", "Something is unusual", err)
 
     expect(entry.level).toBe("warn")
     expect(entry.error).toEqual(
@@ -39,37 +38,33 @@ describe("Structured Logger Service", () => {
         message: "Warning cause",
       })
     )
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("[WARN] [WarnContext] Something is unusual"),
-      entry
-    )
+
+    const expectedJson = JSON.stringify(entry)
+    expect(consoleWarnSpy).toHaveBeenCalledWith(expectedJson)
   })
 
   test("emits formatted error entry with stack trace", () => {
     const err = new TypeError("Failed to load network resource")
-    const entry = logger.error("APIContext", "Network error occurred", err)
+    const entry = logger.error("APIModule", "Network error occurred", err)
 
     expect(entry.level).toBe("error")
-    expect(entry.context).toBe("APIContext")
+    expect(entry.module).toBe("APIModule")
     expect(entry.error).toEqual(
       expect.objectContaining({
         name: "TypeError",
         message: "Failed to load network resource",
       })
     )
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      expect.stringContaining("[ERROR] [APIContext] Network error occurred"),
-      entry
-    )
+
+    const expectedJson = JSON.stringify(entry)
+    expect(consoleErrorSpy).toHaveBeenCalledWith(expectedJson)
   })
 
   test("emits debug log entries", () => {
-    const entry = logger.debug("DebugContext", "Debugging state transition")
+    const entry = logger.debug("DebugModule", "Debugging state transition")
 
     expect(entry.level).toBe("debug")
-    expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining("[DEBUG] [DebugContext] Debugging state transition"),
-      entry
-    )
+    const expectedJson = JSON.stringify(entry)
+    expect(consoleLogSpy).toHaveBeenCalledWith(expectedJson)
   })
 })
