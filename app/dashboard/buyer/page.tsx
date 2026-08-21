@@ -1,55 +1,39 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
-import { ShoppingBag, TrendingUp, Compass, ArrowRight, FileText } from "lucide-react"
+import { clientApiGet } from "@/lib/api-client"
+import { Profile, Order } from "@/lib/types"
+import { ShoppingBag, TrendingUp, Compass, ArrowRight } from "lucide-react"
 
 export default function BuyerOverview() {
-  const [session, setSession] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [stats, setStats] = useState({ orders: 0, pending: 0, spent: 0 })
-  const [recentOrders, setRecentOrders] = useState<any[]>([])
+  const [recentOrders, setRecentOrders] = useState<Order[]>([])
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      if (session) {
-        fetchProfile(session.access_token)
-        fetchStatsAndOrders(session.access_token)
-      }
-    })
-  }, [])
-
-  const fetchProfile = async (token: string) => {
+  const fetchProfile = useCallback(async () => {
     try {
-      const res = await fetch(`http://localhost:4000/api/profile`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
+      const data = await clientApiGet<{ profile: Profile }>("profile")
+      if (data?.profile) {
         setProfile(data.profile)
       }
     } catch (err) {
       console.error(err)
     }
-  }
+  }, [])
 
-  const fetchStatsAndOrders = async (token: string) => {
+  const fetchStatsAndOrders = useCallback(async () => {
     try {
-      const res = await fetch("http://localhost:4000/api/orders?role=buyer", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-
-      if (res.ok) {
-        const data = await res.json()
-        const orders = data.orders || []
+      const data = await clientApiGet<{ orders: Order[] }>("orders?role=buyer")
+      if (data?.orders) {
+        const orders = data.orders
         setRecentOrders(orders.slice(0, 3))
 
-        const pendingOrders = orders.filter((o: any) => o.status === "pending").length
+        const pendingOrders = orders.filter((o) => o.status === "pending").length
         const totalSpent = orders
-          .filter((o: any) => o.status !== "cancelled")
-          .reduce((sum: number, o: any) => sum + (o.total_price || 0), 0)
+          .filter((o) => o.status !== "cancelled")
+          .reduce((sum, o) => sum + (o.total_price || 0), 0)
 
         setStats({
           orders: orders.length,
@@ -60,7 +44,16 @@ export default function BuyerOverview() {
     } catch (err) {
       console.error(err)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        fetchProfile()
+        fetchStatsAndOrders()
+      }
+    })
+  }, [fetchProfile, fetchStatsAndOrders])
 
   return (
     <div className="space-y-8">

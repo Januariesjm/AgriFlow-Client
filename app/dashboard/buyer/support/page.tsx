@@ -1,8 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
-import { HelpCircle, AlertTriangle, MessageSquare, Plus, FileText, CheckCircle2 } from "lucide-react"
+import { clientApiGet } from "@/lib/api-client"
+import { Order } from "@/lib/types"
+import { HelpCircle, Plus, CheckCircle2 } from "lucide-react"
 
 interface Ticket {
   id: string
@@ -30,10 +32,8 @@ const FAQS = [
 ]
 
 export default function BuyerSupport() {
-  const [session, setSession] = useState<any>(null)
-  const [orders, setOrders] = useState<any[]>([])
+  const [orders, setOrders] = useState<Order[]>([])
   const [tickets, setTickets] = useState<Ticket[]>([])
-  const [loading, setLoading] = useState(true)
 
   // Form states
   const [category, setCategory] = useState("Dispute Order")
@@ -44,18 +44,26 @@ export default function BuyerSupport() {
   const [success, setSuccess] = useState("")
   const [error, setError] = useState("")
 
+  const fetchOrders = useCallback(async () => {
+    try {
+      const data = await clientApiGet<{ orders: Order[] }>("orders?role=buyer")
+      if (data?.orders) {
+        setOrders(data.orders)
+      }
+    } catch (err) {
+      console.error(err)
+    }
+  }, [])
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
       if (session) {
-        fetchOrders(session.access_token)
+        fetchOrders()
         
-        // Load tickets
         const stored = localStorage.getItem(`af_buyer_tickets_${session.user.id}`)
         if (stored) {
           setTickets(JSON.parse(stored))
         } else {
-          // Default support ticket
           const defaultTickets: Ticket[] = [
             {
               id: "TCK-1082",
@@ -71,24 +79,7 @@ export default function BuyerSupport() {
         }
       }
     })
-  }, [])
-
-  const fetchOrders = async (token: string) => {
-    setLoading(true)
-    try {
-      const res = await fetch("http://localhost:4000/api/orders?role=buyer", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setOrders(data.orders || [])
-      }
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
-  }
+  }, [fetchOrders])
 
   const handleCreateTicket = (e: React.FormEvent) => {
     e.preventDefault()
@@ -117,9 +108,11 @@ export default function BuyerSupport() {
 
     const updated = [newTicket, ...tickets]
     setTickets(updated)
-    if (session?.user) {
-      localStorage.setItem(`af_buyer_tickets_${session.user.id}`, JSON.stringify(updated))
-    }
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        localStorage.setItem(`af_buyer_tickets_${session.user.id}`, JSON.stringify(updated))
+      }
+    })
 
     setSuccess(category === "Dispute Order" ? "Dispute filed successfully. Escrow funds frozen." : "Support ticket submitted successfully.")
     setSubject("")

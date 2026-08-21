@@ -1,55 +1,36 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
-import { Truck, MapPin, CheckCircle2, AlertCircle, RefreshCw, Compass } from "lucide-react"
+import { clientApiGet } from "@/lib/api-client"
+import { Order, Vehicle, TransportRequest } from "@/lib/types"
+import { Truck, CheckCircle2, AlertCircle, RefreshCw, Compass } from "lucide-react"
 
 export default function BuyerLogistics() {
-  const [session, setSession] = useState<any>(null)
-  const [orders, setOrders] = useState<any[]>([])
-  const [vehicles, setVehicles] = useState<any[]>([])
-  const [transportRequests, setTransportRequests] = useState<any[]>([])
+  const [orders, setOrders] = useState<Order[]>([])
+  const [vehicles, setVehicles] = useState<Vehicle[]>([])
+  const [transportRequests, setTransportRequests] = useState<TransportRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      if (session) {
-        fetchLogisticsData(session.access_token)
-      }
-    })
-  }, [])
-
-  const fetchLogisticsData = async (token: string) => {
+  const fetchLogisticsData = useCallback(async () => {
     setLoading(true)
     setError("")
     try {
-      const [ordersRes, vehiclesRes, requestsRes] = await Promise.all([
-        fetch("http://localhost:4000/api/orders?role=buyer", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch("http://localhost:4000/api/transport/vehicles", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch("http://localhost:4000/api/transport/requests", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
+      const [ordersData, vehiclesData, requestsData] = await Promise.all([
+        clientApiGet<{ orders: Order[] }>("orders?role=buyer"),
+        clientApiGet<{ vehicles: Vehicle[] }>("transport/vehicles"),
+        clientApiGet<{ requests: TransportRequest[] }>("transport/requests"),
       ])
 
-      if (ordersRes.ok) {
-        const data = await ordersRes.json()
-        setOrders(data.orders || [])
+      if (ordersData?.orders) {
+        setOrders(ordersData.orders)
       }
-      if (vehiclesRes.ok) {
-        const data = await vehiclesRes.json()
-        setVehicles(data.vehicles || [])
+      if (vehiclesData?.vehicles) {
+        setVehicles(vehiclesData.vehicles)
       }
-      if (requestsRes.ok) {
-        const data = await requestsRes.json()
-        // Filter transport requests related to buyer's orders
-        const requests = data.requests || []
-        setTransportRequests(requests)
+      if (requestsData?.requests) {
+        setTransportRequests(requestsData.requests)
       }
     } catch (err) {
       console.error(err)
@@ -57,11 +38,19 @@ export default function BuyerLogistics() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        fetchLogisticsData()
+      }
+    })
+  }, [fetchLogisticsData])
 
   // Filter transport requests relevant to the buyer's orders
   const buyerOrderIds = new Set(orders.map((o) => o.id))
-  const inboundRequests = transportRequests.filter((r) => buyerOrderIds.has(r.order_id))
+  const inboundRequests = transportRequests.filter((r) => r.order_id && buyerOrderIds.has(r.order_id))
 
   const activeDeliveries = inboundRequests.filter((r) => ["accepted", "in_transit"].includes(r.status)).length
   const pendingPickup = inboundRequests.filter((r) => r.status === "pending").length
@@ -171,8 +160,8 @@ export default function BuyerLogistics() {
               Active Inbound Manifests
             </h3>
             <button
-              onClick={() => session && fetchLogisticsData(session.access_token)}
-              className="text-xs text-muted-foreground hover:text-white flex items-center space-x-1.5 transition-colors"
+              onClick={() => fetchLogisticsData()}
+              className="text-xs text-muted-foreground hover:text-white flex items-center space-x-1.5 transition-colors cursor-pointer"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
               <span>Reload Manifests</span>

@@ -1,55 +1,43 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
-import { BarChart3, TrendingUp, PieChart, ArrowUpRight, Compass, ShieldAlert, Package, Calendar } from "lucide-react"
-
-interface OrderData {
-  id: string
-  status: string
-  total_price: number
-  quantity: number
-  unit_price: number
-  created_at: string
-  product?: { name: string; category: string; unit: string }
-  farmer?: { full_name: string; country: string }
-}
+import { clientApiGet } from "@/lib/api-client"
+import { Order } from "@/lib/types"
+import { BarChart3, TrendingUp, PieChart, Package } from "lucide-react"
 
 export default function BuyerAnalytics() {
-  const [orders, setOrders] = useState<OrderData[]>([])
+  const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) fetchAll(session.access_token)
-    })
-  }, [])
-
-  const fetchAll = async (token: string) => {
+  const fetchAll = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch("http://localhost:4000/api/orders?role=buyer", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (res.ok) {
-        const d = await res.json()
-        setOrders(d.orders || [])
+      const data = await clientApiGet<{ orders: Order[] }>("orders?role=buyer")
+      if (data?.orders) {
+        setOrders(data.orders)
       }
     } catch (err) {
       console.error(err)
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  // ─── Computed analytics ───────────────────────────────────────
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) fetchAll()
+    })
+  }, [fetchAll])
+
+  // Computed analytics
   const nonCancelledOrders = orders.filter((o) => o.status !== "cancelled")
   const deliveredOrders = orders.filter((o) => o.status === "delivered")
   const pendingOrders = orders.filter((o) => o.status === "pending")
   const confirmedOrders = orders.filter((o) => o.status === "confirmed")
   const inTransitOrders = orders.filter((o) => o.status === "in_transit")
 
-  const totalSpend = nonCancelledOrders.reduce((s, o) => s + o.total_price, 0)
+  const totalSpend = nonCancelledOrders.reduce((s, o) => s + (o.total_price || 0), 0)
   const avgOrderPrice = nonCancelledOrders.length > 0 ? totalSpend / nonCancelledOrders.length : 0
   const fulfillmentRate = orders.length > 0 ? (deliveredOrders.length / orders.length) * 100 : 0
   
@@ -66,7 +54,7 @@ export default function BuyerAnalytics() {
         const od = new Date(o.created_at)
         return od.getMonth() === monthNum && od.getFullYear() === year
       })
-      .reduce((s, o) => s + o.total_price, 0)
+      .reduce((s, o) => s + (o.total_price || 0), 0)
     monthlySpend.push({ label: `${month}`, value: sum })
   }
   const maxMonthlySpend = Math.max(...monthlySpend.map((m) => m.value), 1)
@@ -75,7 +63,7 @@ export default function BuyerAnalytics() {
   const categoryMap = new Map<string, number>()
   nonCancelledOrders.forEach((o) => {
     const cat = o.product?.category || "Other"
-    categoryMap.set(cat, (categoryMap.get(cat) || 0) + o.total_price)
+    categoryMap.set(cat, (categoryMap.get(cat) || 0) + (o.total_price || 0))
   })
   const categoryBreakdown = Array.from(categoryMap.entries())
     .map(([category, spend]) => ({ category, spend }))
@@ -93,7 +81,7 @@ export default function BuyerAnalytics() {
     const name = o.farmer?.full_name || "Unknown Farmer"
     const existing = supplierSales.get(name) || { name, orders: 0, revenue: 0 }
     existing.orders += 1
-    existing.revenue += o.total_price
+    existing.revenue += o.total_price || 0
     supplierSales.set(name, existing)
   })
   const topSuppliers = Array.from(supplierSales.values())
@@ -106,7 +94,7 @@ export default function BuyerAnalytics() {
     const country = o.farmer?.country || "Kenya"
     const existing = countryMap.get(country) || { country, orders: 0, spend: 0 }
     existing.orders += 1
-    existing.spend += o.total_price
+    existing.spend += o.total_price || 0
     countryMap.set(country, existing)
   })
   const countryBreakdown = Array.from(countryMap.values())

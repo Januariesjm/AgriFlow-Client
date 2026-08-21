@@ -1,29 +1,38 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { supabase } from "@/lib/supabase"
-import { Settings, User, MapPin, Phone, Mail, Shield, CheckCircle2, AlertCircle, Key, Globe, Compass } from "lucide-react"
+import { useSession } from "@/lib/hooks/useSession"
+import { useProfileForm } from "@/lib/hooks/useProfileForm"
+import { Settings, User, Phone, Mail, CheckCircle2, AlertCircle, Key, Globe, Compass } from "lucide-react"
 
 export default function BuyerSettings() {
-  const [session, setSession] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState("")
-  const [success, setSuccess] = useState("")
-
-  // Editable fields
-  const [fullName, setFullName] = useState("")
-  const [phone, setPhone] = useState("")
-  const [country, setCountry] = useState("")
-  const [region, setRegion] = useState("")
-
-  // Password change
-  const [newPassword, setNewPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [passwordSaving, setPasswordSaving] = useState(false)
-  const [passwordSuccess, setPasswordSuccess] = useState("")
-  const [passwordError, setPasswordError] = useState("")
+  const { session } = useSession()
+  const {
+    profile,
+    loading,
+    saving,
+    error,
+    success,
+    fullName,
+    setFullName,
+    phone,
+    setPhone,
+    country,
+    setCountry,
+    region,
+    setRegion,
+    newPassword,
+    setNewPassword,
+    confirmPassword,
+    setConfirmPassword,
+    passwordSaving,
+    passwordSuccess,
+    passwordError,
+    loadProfile,
+    handleSaveProfile,
+    handleChangePassword,
+    setSuccess,
+  } = useProfileForm()
 
   // Notification & Sourcing preferences (client-side)
   const [emailNotifs, setEmailNotifs] = useState(true)
@@ -32,110 +41,22 @@ export default function BuyerSettings() {
   const [maxSourcingRange, setMaxSourcingRange] = useState("250") // km
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      if (session) {
-        fetchProfile(session.access_token)
-        // Load notification prefs
-        const stored = localStorage.getItem(`af_buyer_notif_prefs_${session.user.id}`)
-        if (stored) {
+    if (session) {
+      loadProfile()
+      const stored = localStorage.getItem(`af_buyer_notif_prefs_${session.user.id}`)
+      if (stored) {
+        try {
           const parsed = JSON.parse(stored)
           setEmailNotifs(parsed.emailNotifs ?? true)
           setOrderNotifs(parsed.orderNotifs ?? true)
           setPriceAlerts(parsed.priceAlerts ?? true)
           setMaxSourcingRange(parsed.maxSourcingRange ?? "250")
+        } catch (e) {
+          console.error(e)
         }
       }
-    })
-  }, [])
-
-  const fetchProfile = async (token: string) => {
-    setLoading(true)
-    try {
-      const res = await fetch("http://localhost:4000/api/profile", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setProfile(data.profile)
-        setFullName(data.profile.full_name || "")
-        setPhone(data.profile.phone || "")
-        setCountry(data.profile.country || "")
-        setRegion(data.profile.region || "")
-      }
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
     }
-  }
-
-  const handleSaveProfile = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-    setSuccess("")
-    setSaving(true)
-
-    try {
-      const res = await fetch("http://localhost:4000/api/profile", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          full_name: fullName,
-          phone,
-          country,
-          region,
-        }),
-      })
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}))
-        throw new Error(errData.error || "Failed to update profile")
-      }
-
-      const data = await res.json()
-      setProfile(data.profile)
-      setSuccess("Profile updated successfully!")
-      setTimeout(() => setSuccess(""), 4000)
-    } catch (err: any) {
-      setError(err.message)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setPasswordError("")
-    setPasswordSuccess("")
-
-    if (newPassword.length < 6) {
-      setPasswordError("Password must be at least 6 characters long.")
-      return
-    }
-    if (newPassword !== confirmPassword) {
-      setPasswordError("Passwords do not match.")
-      return
-    }
-
-    setPasswordSaving(true)
-    try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword })
-      if (error) throw new Error(error.message)
-
-      setPasswordSuccess("Password changed successfully!")
-      setNewPassword("")
-      setConfirmPassword("")
-      setTimeout(() => setPasswordSuccess(""), 4000)
-    } catch (err: any) {
-      setPasswordError(err.message)
-    } finally {
-      setPasswordSaving(false)
-    }
-  }
+  }, [session, loadProfile])
 
   const saveSourcingPrefs = () => {
     if (session?.user) {
@@ -307,6 +228,7 @@ export default function BuyerSettings() {
                 <span className="text-[10px] text-muted-foreground">{pref.desc}</span>
               </div>
               <button
+                type="button"
                 onClick={() => pref.setter(!pref.state)}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
                   pref.state ? "bg-primary" : "bg-slate-700"
@@ -322,6 +244,7 @@ export default function BuyerSettings() {
           ))}
 
           <button
+            type="button"
             onClick={saveSourcingPrefs}
             className="bg-slate-800 hover:bg-slate-700/80 border border-border text-white font-semibold px-6 py-2.5 rounded-lg text-sm transition-all cursor-pointer"
           >
@@ -345,7 +268,7 @@ export default function BuyerSettings() {
         )}
 
         {passwordError && (
-          <div className="bg-destructive/10 border border-destructive/30 text-destructive text-sm px-4 py-3 rounded-lg mb-5 flex items-center space-x-2">
+          <div className="bg-destructive/10 border border-destructive/30 text-destructive text-sm px-4 py-3 rounded-lg flex items-center space-x-2">
             <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
             <span>{passwordError}</span>
           </div>

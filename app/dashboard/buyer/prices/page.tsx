@@ -1,23 +1,21 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { TrendingUp, Table, Truck } from "lucide-react"
+import { useState, useEffect, useCallback } from "react"
+import { api } from "@/lib/api"
+import { ComparisonItem } from "@/lib/types"
+import { TrendingUp, Table } from "lucide-react"
 
 export default function BuyerPrices() {
   const [crop, setCrop] = useState("Maize")
   const [lat, setLat] = useState("-1.2921")
   const [lng, setLng] = useState("36.8219")
-  const [comparisons, setComparisons] = useState<any[]>([])
-  const [cheapest, setCheapest] = useState<any>(null)
+  const [comparisons, setComparisons] = useState<ComparisonItem[]>([])
+  const [cheapest, setCheapest] = useState<ComparisonItem | null>(null)
   const [loading, setLoading] = useState(false)
 
   const crops = ["Maize", "Beans", "Rice", "Tomatoes", "Onions", "Potatoes"]
 
-  useEffect(() => {
-    handleCompare()
-  }, [crop])
-
-  const handleCompare = async () => {
+  const handleCompare = useCallback(async () => {
     setLoading(true)
     try {
       const compareParams = new URLSearchParams({
@@ -26,18 +24,23 @@ export default function BuyerPrices() {
         buyer_lng: lng,
       })
 
-      const res = await fetch(`http://localhost:4000/api/prices/compare?${compareParams.toString()}`)
-      if (res.ok) {
-        const data = await res.json()
-        setComparisons(compareData => data.comparisons || [])
-        setCheapest(data.cheapest_delivered)
+      const data = await api.get<{ comparisons: ComparisonItem[]; cheapest_delivered: ComparisonItem }>(
+        `prices/compare?${compareParams.toString()}`
+      )
+      if (data) {
+        setComparisons(data.comparisons || [])
+        setCheapest(data.cheapest_delivered || null)
       }
     } catch (err) {
       console.error(err)
     } finally {
       setLoading(false)
     }
-  }
+  }, [crop, lat, lng])
+
+  useEffect(() => {
+    handleCompare()
+  }, [handleCompare])
 
   return (
     <div className="space-y-8">

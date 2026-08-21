@@ -1,35 +1,34 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import Link from "next/link"
-import { Search, MapPin, Scale, Calendar } from "lucide-react"
+import { api } from "@/lib/api"
+import { Product } from "@/lib/types"
+import { Search, MapPin, Scale } from "lucide-react"
 
 export default function BuyerProducts() {
-  const [products, setProducts] = useState<any[]>([])
+  const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
 
-  useEffect(() => {
-    fetchProducts()
-  }, [])
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     setLoading(true)
     try {
-      const url = search 
-        ? `http://localhost:4000/api/products?search=${search}`
-        : "http://localhost:4000/api/products"
-      const res = await fetch(url)
-      if (res.ok) {
-        const data = await res.json()
-        setProducts(data.products || [])
+      const endpoint = search ? `products?search=${encodeURIComponent(search)}` : "products"
+      const data = await api.get<{ products: Product[] }>(endpoint)
+      if (data?.products) {
+        setProducts(data.products)
       }
     } catch (err) {
       console.error(err)
     } finally {
       setLoading(false)
     }
-  }
+  }, [search])
+
+  useEffect(() => {
+    fetchProducts()
+  }, [fetchProducts])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
