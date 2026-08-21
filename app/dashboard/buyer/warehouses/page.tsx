@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { useSession } from "@/lib/hooks/useSession"
+import { logger } from "@/lib/logger"
 import { clientApiGet, clientApiPost, clientApiDelete } from "@/lib/api-client"
 import { Warehouse } from "@/lib/types"
 import { Compass, CheckCircle, Plus, Trash2, Home, BarChart } from "lucide-react"
@@ -27,7 +28,8 @@ export default function MyWarehouses() {
     try {
       const data = await clientApiGet<Warehouse[]>("buyer/warehouses")
       setWarehouses(data || [])
-    } catch {
+    } catch (err: unknown) {
+      logger.warn("BuyerWarehouses", "API request failed, invoking localStorage fallback", err)
       // Local storage fallback for UX resilience
       if (session?.user) {
         const stored = localStorage.getItem(`af_buyer_warehouses_${session.user.id}`)

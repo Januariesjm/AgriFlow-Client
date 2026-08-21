@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import Header from "@/components/layout/header"
 import Footer from "@/components/layout/footer"
+import { logger } from "@/lib/logger"
 import { supabase } from "@/lib/supabase"
 import { api } from "@/lib/api"
 import { Product } from "@/lib/types"
@@ -38,16 +39,14 @@ export default function ProductDetail() {
       setSession(session)
     })
     fetchProduct()
-  }, [id])
-
   const fetchProduct = async () => {
     try {
       const data = await api.get<{ product?: Product }>(`products/${id}`)
       if (data?.product) {
         setProduct(data.product)
       }
-    } catch (err) {
-      console.error("Failed to fetch product:", err)
+    } catch (err: unknown) {
+      logger.error("ProductDetail", `Failed to fetch product ${id}`, err)
     } finally {
       setLoading(false)
     }
@@ -74,8 +73,8 @@ export default function ProductDetail() {
         setTransportCost(data.estimated_cost)
         setDistance(data.distance_km)
       }
-    } catch (err) {
-      console.error("Failed to calculate transport cost:", err)
+    } catch (err: unknown) {
+      logger.warn("ProductDetail", "Failed to calculate transport cost", err)
     } finally {
       setCalcLoading(false)
     }

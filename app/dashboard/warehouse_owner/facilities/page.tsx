@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { useSession } from "@/lib/hooks/useSession"
+import { logger } from "@/lib/logger"
 import { clientApiGet, clientApiPost, clientApiDelete } from "@/lib/api-client"
 import { Facility } from "@/lib/types"
 import { Compass, Plus, Trash2, Globe, MapPin, Shield } from "lucide-react"
@@ -30,7 +31,8 @@ export default function WarehouseFacilities() {
     try {
       const data = await clientApiGet<Facility[]>("warehouse-owner/facilities")
       setFacilities(data || [])
-    } catch {
+    } catch (err: unknown) {
+      logger.warn("WarehouseFacilities", "Failed to fetch facilities from API, invoking fallback", err)
       if (session?.user) {
         const stored = localStorage.getItem(`af_warehouse_facilities_${session.user.id}`)
         if (stored) {
