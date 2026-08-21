@@ -75,7 +75,7 @@ describe("Buyer MyWarehouses Component", () => {
     })
 
     await waitFor(() => {
-      expect(screen.getByText("Warehouse registered successfully!")).toBeInTheDocument()
+      expect(screen.getByText(/registered successfully/i)).toBeInTheDocument()
     })
   })
 

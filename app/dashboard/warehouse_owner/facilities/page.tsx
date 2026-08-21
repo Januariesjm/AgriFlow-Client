@@ -1,17 +1,31 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
-import { useSession } from "@/lib/hooks/useSession"
+import { useState } from "react"
+import { useResourceWithFallback } from "@/lib/hooks/useResourceWithFallback"
 import { logger } from "@/lib/logger"
-import { clientApiGet, clientApiPost, clientApiDelete } from "@/lib/api-client"
 import { Facility } from "@/lib/types"
 import { Compass, Plus, Trash2, Globe, MapPin, Shield } from "lucide-react"
 import PlaceAutocomplete from "@/components/maps/PlaceAutocomplete"
 import GoogleMap from "@/components/maps/GoogleMap"
 
+const DEFAULT_FACILITIES: Facility[] = [
+  { id: "f1", name: "Rift Valley Cold Hub", type: "Cold Storage", capacity: 500, occupied: 320, dailyRate: 0.8, address: "Nakuru Industrial Block 4", gpsLat: "-0.3031", gpsLng: "36.0613", status: "active" },
+  { id: "f2", name: "Nakuru Dry Silos", type: "Grain Silo", capacity: 1500, occupied: 950, dailyRate: 0.4, address: "Silo Road, Section 5, Nakuru", gpsLat: "-0.2831", gpsLng: "36.0713", status: "active" },
+  { id: "f3", name: "Molo Ambient Store", type: "Ambient Dry", capacity: 800, occupied: 120, dailyRate: 0.3, address: "Molo Town Depot B", gpsLat: "-0.2483", gpsLng: "35.7314", status: "active" },
+]
+
 export default function WarehouseFacilities() {
-  const { session } = useSession()
-  const [facilities, setFacilities] = useState<Facility[]>([])
+  const {
+    items: facilities,
+    setItems,
+    loading,
+    error,
+    setError,
+    success,
+    setSuccess,
+    addResource,
+    deleteResource,
+  } = useResourceWithFallback<Facility>("warehouse-owner/facilities", "af_warehouse_facilities", DEFAULT_FACILITIES)
 
   // Form states
   const [name, setName] = useState("")
@@ -23,51 +37,8 @@ export default function WarehouseFacilities() {
   const [gpsLng, setGpsLng] = useState("36.8219")
   const [status, setStatus] = useState<Facility["status"]>("active")
 
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [success, setSuccess] = useState("")
-
-  const loadFacilities = useCallback(async () => {
-    try {
-      const data = await clientApiGet<Facility[]>("warehouse-owner/facilities")
-      setFacilities(data || [])
-    } catch (err: unknown) {
-      logger.warn("WarehouseFacilities", "Failed to fetch facilities from API, invoking fallback", err)
-      if (session?.user) {
-        const stored = localStorage.getItem(`af_warehouse_facilities_${session.user.id}`)
-        if (stored) {
-          setFacilities(JSON.parse(stored))
-        } else {
-          const defaultFac: Facility[] = [
-            { id: "f1", name: "Rift Valley Cold Hub", type: "Cold Storage", capacity: 500, occupied: 320, dailyRate: 0.8, address: "Nakuru Industrial Block 4", gpsLat: "-0.3031", gpsLng: "36.0613", status: "active" },
-            { id: "f2", name: "Nakuru Dry Silos", type: "Grain Silo", capacity: 1500, occupied: 950, dailyRate: 0.4, address: "Silo Road, Section 5, Nakuru", gpsLat: "-0.2831", gpsLng: "36.0713", status: "active" },
-            { id: "f3", name: "Molo Ambient Store", type: "Ambient Dry", capacity: 800, occupied: 120, dailyRate: 0.3, address: "Molo Town Depot B", gpsLat: "-0.2483", gpsLng: "35.7314", status: "active" },
-          ]
-          setFacilities(defaultFac)
-          localStorage.setItem(`af_warehouse_facilities_${session.user.id}`, JSON.stringify(defaultFac))
-        }
-      }
-    }
-  }, [session])
-
-  useEffect(() => {
-    if (session) {
-      loadFacilities()
-    }
-  }, [session, loadFacilities])
-
-  const saveFacilities = (list: Facility[]) => {
-    setFacilities(list)
-    if (session?.user) {
-      localStorage.setItem(`af_warehouse_facilities_${session.user.id}`, JSON.stringify(list))
-    }
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
-    setError("")
-    setSuccess("")
 
     try {
       if (!name.trim() || !address.trim()) {
@@ -90,54 +61,35 @@ export default function WarehouseFacilities() {
         throw new Error("Please provide valid numeric GPS coordinates.")
       }
 
-      const payload = {
-        name,
-        type,
-        capacity: capVal,
-        occupied: 0,
-        dailyRate: rateVal,
-        address,
-        gpsLat,
-        gpsLng,
-        status,
-      }
-
-      try {
-        const created = await clientApiPost<Facility>("warehouse-owner/facilities", payload)
-        saveFacilities([created, ...facilities])
-      } catch {
-        const fallback: Facility = {
-          id: `fac-${Date.now()}`,
-          ...payload,
-        }
-        saveFacilities([fallback, ...facilities])
-      }
+      await addResource(
+        {
+          name,
+          type,
+          capacity: capVal,
+          occupied: 0,
+          dailyRate: rateVal,
+          address,
+          gpsLat,
+          gpsLng,
+          status,
+        },
+        "fac"
+      )
 
       setName("")
       setCapacity("")
       setDailyRate("")
       setAddress("")
-      setSuccess("Storage facility registered successfully!")
-      setTimeout(() => setSuccess(""), 4000)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "An error occurred while registering facility"
+      logger.error("WarehouseFacilities", "Form submit failed", err)
       setError(msg)
-    } finally {
-      setLoading(false)
     }
   }
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to remove this storage depot?")) return
-    try {
-      await clientApiDelete(`warehouse-owner/facilities/${id}`)
-    } catch {
-      // Local fallback
-    }
-    const updated = facilities.filter((f) => f.id !== id)
-    saveFacilities(updated)
-    setSuccess("Facility removed.")
-    setTimeout(() => setSuccess(""), 4000)
+    await deleteResource(id)
   }
 
   const toggleStatus = (id: string, current: Facility["status"]) => {

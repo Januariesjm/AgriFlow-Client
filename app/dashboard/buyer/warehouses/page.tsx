@@ -1,15 +1,35 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
-import { useSession } from "@/lib/hooks/useSession"
+import { useState } from "react"
+import { useResourceWithFallback } from "@/lib/hooks/useResourceWithFallback"
 import { logger } from "@/lib/logger"
-import { clientApiGet, clientApiPost, clientApiDelete } from "@/lib/api-client"
 import { Warehouse } from "@/lib/types"
 import { Compass, CheckCircle, Plus, Trash2, Home, BarChart } from "lucide-react"
 
+const DEFAULT_WAREHOUSES: Warehouse[] = [
+  {
+    id: "wh-1",
+    name: "Nairobi Central Depot",
+    location: "Nairobi Industrial Area",
+    capacity: 500,
+    storageType: "Cold Storage",
+    gpsLat: -1.3005,
+    gpsLng: 36.8822,
+    status: "active",
+    createdAt: new Date().toISOString(),
+  },
+]
+
 export default function MyWarehouses() {
-  const { session } = useSession()
-  const [warehouses, setWarehouses] = useState<Warehouse[]>([])
+  const {
+    items: warehouses,
+    loading,
+    error,
+    setError,
+    success,
+    addResource,
+    deleteResource,
+  } = useResourceWithFallback<Warehouse>("buyer/warehouses", "af_buyer_warehouses", DEFAULT_WAREHOUSES)
 
   // Form fields
   const [name, setName] = useState("")
@@ -20,60 +40,8 @@ export default function MyWarehouses() {
   const [gpsLng, setGpsLng] = useState("36.8219")
   const [status, setStatus] = useState<"active" | "inactive">("active")
 
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [success, setSuccess] = useState("")
-
-  const loadWarehouses = useCallback(async () => {
-    try {
-      const data = await clientApiGet<Warehouse[]>("buyer/warehouses")
-      setWarehouses(data || [])
-    } catch (err: unknown) {
-      logger.warn("BuyerWarehouses", "API request failed, invoking localStorage fallback", err)
-      // Local storage fallback for UX resilience
-      if (session?.user) {
-        const stored = localStorage.getItem(`af_buyer_warehouses_${session.user.id}`)
-        if (stored) {
-          setWarehouses(JSON.parse(stored))
-        } else {
-          const defaultWh: Warehouse[] = [
-            {
-              id: "wh-1",
-              name: "Nairobi Central Depot",
-              location: "Nairobi Industrial Area",
-              capacity: 500,
-              storageType: "Cold Storage",
-              gpsLat: -1.3005,
-              gpsLng: 36.8822,
-              status: "active",
-              createdAt: new Date().toISOString(),
-            },
-          ]
-          setWarehouses(defaultWh)
-          localStorage.setItem(`af_buyer_warehouses_${session.user.id}`, JSON.stringify(defaultWh))
-        }
-      }
-    }
-  }, [session])
-
-  useEffect(() => {
-    if (session) {
-      loadWarehouses()
-    }
-  }, [session, loadWarehouses])
-
-  const saveWarehouses = (list: Warehouse[]) => {
-    setWarehouses(list)
-    if (session?.user) {
-      localStorage.setItem(`af_buyer_warehouses_${session.user.id}`, JSON.stringify(list))
-    }
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
-    setError("")
-    setSuccess("")
 
     try {
       if (!name.trim() || !location.trim()) {
@@ -91,52 +59,33 @@ export default function MyWarehouses() {
         throw new Error("Please enter valid numeric GPS coordinates.")
       }
 
-      const newWarehousePayload = {
-        name,
-        location,
-        capacity: capVal,
-        storageType,
-        gpsLat: latVal,
-        gpsLng: lngVal,
-        status,
-      }
-
-      try {
-        const created = await clientApiPost<Warehouse>("buyer/warehouses", newWarehousePayload)
-        saveWarehouses([created, ...warehouses])
-      } catch {
-        const fallbackWarehouse: Warehouse = {
-          id: `wh-${Date.now()}`,
-          ...newWarehousePayload,
+      await addResource(
+        {
+          name,
+          location,
+          capacity: capVal,
+          storageType,
+          gpsLat: latVal,
+          gpsLng: lngVal,
+          status,
           createdAt: new Date().toISOString(),
-        }
-        saveWarehouses([fallbackWarehouse, ...warehouses])
-      }
+        },
+        "wh"
+      )
 
       setName("")
       setLocation("")
       setCapacity("")
-      setSuccess("Warehouse registered successfully!")
-      setTimeout(() => setSuccess(""), 4000)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "An error occurred while saving"
+      logger.error("BuyerWarehouses", "Form submit failed", err)
       setError(msg)
-    } finally {
-      setLoading(false)
     }
   }
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this warehouse node?")) return
-    try {
-      await clientApiDelete(`buyer/warehouses/${id}`)
-    } catch {
-      // Local fallback
-    }
-    const updated = warehouses.filter((w) => w.id !== id)
-    saveWarehouses(updated)
-    setSuccess("Warehouse deleted successfully.")
-    setTimeout(() => setSuccess(""), 4000)
+    await deleteResource(id)
   }
 
   const totalCapacity = warehouses.reduce((sum, w) => sum + w.capacity, 0)

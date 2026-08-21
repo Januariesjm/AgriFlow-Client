@@ -54,3 +54,33 @@ export const CreateOrderInputSchema = z.object({
 })
 
 export type CreateOrderInput = z.infer<typeof CreateOrderInputSchema>
+
+export const WarehouseSchema = z.object({
+  id: z.string(),
+  name: z.string().min(1, "Name is required"),
+  location: z.string(),
+  capacity: z.number(),
+  storageType: z.string(),
+  gpsLat: z.number(),
+  gpsLng: z.number(),
+  status: z.enum(["active", "inactive"]),
+  createdAt: z.string(),
+})
+
+export type WarehouseSchemaType = z.infer<typeof WarehouseSchema>
+
+export const FacilitySchema = z.object({
+  id: z.string(),
+  name: z.string().min(1, "Name is required"),
+  type: z.string(),
+  capacity: z.number(),
+  occupied: z.number(),
+  dailyRate: z.number(),
+  address: z.string(),
+  gpsLat: z.string(),
+  gpsLng: z.string(),
+  status: z.enum(["active", "full", "maintenance"]),
+})
+
+export type FacilitySchemaType = z.infer<typeof FacilitySchema>
+
