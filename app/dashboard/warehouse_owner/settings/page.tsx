@@ -1,12 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
+import { clientApiGet, clientApiPatch } from "@/lib/api-client"
+import { Profile } from "@/lib/types"
 import { Settings, User, Phone, Mail, Shield, CheckCircle2, AlertCircle, Key, Globe } from "lucide-react"
 
 export default function WarehouseSettings() {
-  const [session, setSession] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
@@ -31,32 +32,11 @@ export default function WarehouseSettings() {
   const [temperatureAlerts, setTemperatureAlerts] = useState(true)
   const [inboundTruckAlerts, setInboundTruckAlerts] = useState(true)
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      if (session) {
-        fetchProfile(session.access_token)
-        // Load notification prefs
-        const stored = localStorage.getItem(`af_warehouse_notif_prefs_${session.user.id}`)
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          setEmailNotifs(parsed.emailNotifs ?? true)
-          setBookingNotifs(parsed.bookingNotifs ?? true)
-          setTemperatureAlerts(parsed.temperatureAlerts ?? true)
-          setInboundTruckAlerts(parsed.inboundTruckAlerts ?? true)
-        }
-      }
-    })
-  }, [])
-
-  const fetchProfile = async (token: string) => {
+  const fetchProfile = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch("http://localhost:4000/api/profile", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
+      const data = await clientApiGet<{ profile: Profile }>("profile")
+      if (data?.profile) {
         setProfile(data.profile)
         setFullName(data.profile.full_name || "")
         setPhone(data.profile.phone || "")
@@ -68,7 +48,23 @@ export default function WarehouseSettings() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        fetchProfile()
+        const stored = localStorage.getItem(`af_warehouse_notif_prefs_${session.user.id}`)
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          setEmailNotifs(parsed.emailNotifs ?? true)
+          setBookingNotifs(parsed.bookingNotifs ?? true)
+          setTemperatureAlerts(parsed.temperatureAlerts ?? true)
+          setInboundTruckAlerts(parsed.inboundTruckAlerts ?? true)
+        }
+      }
+    })
+  }, [fetchProfile])
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -77,31 +73,21 @@ export default function WarehouseSettings() {
     setSaving(true)
 
     try {
-      const res = await fetch("http://localhost:4000/api/profile", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          full_name: fullName,
-          phone,
-          country,
-          region,
-        }),
+      const data = await clientApiPatch<{ profile: Profile }>("profile", {
+        full_name: fullName,
+        phone,
+        country,
+        region,
       })
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}))
-        throw new Error(errData.error || "Failed to update profile")
+      if (data?.profile) {
+        setProfile(data.profile)
       }
-
-      const data = await res.json()
-      setProfile(data.profile)
       setSuccess("Profile settings saved successfully!")
       setTimeout(() => setSuccess(""), 4000)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to update profile"
+      setError(msg)
     } finally {
       setSaving(false)
     }
@@ -130,20 +116,23 @@ export default function WarehouseSettings() {
       setNewPassword("")
       setConfirmPassword("")
       setTimeout(() => setPasswordSuccess(""), 4000)
-    } catch (err: any) {
-      setPasswordError(err.message)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to change password"
+      setPasswordError(msg)
     } finally {
       setPasswordSaving(false)
     }
   }
 
   const saveNotifPrefs = () => {
-    if (session?.user) {
-      const prefs = { emailNotifs, bookingNotifs, temperatureAlerts, inboundTruckAlerts }
-      localStorage.setItem(`af_warehouse_notif_prefs_${session.user.id}`, JSON.stringify(prefs))
-      setSuccess("Notification settings saved!")
-      setTimeout(() => setSuccess(""), 3000)
-    }
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        const prefs = { emailNotifs, bookingNotifs, temperatureAlerts, inboundTruckAlerts }
+        localStorage.setItem(`af_warehouse_notif_prefs_${session.user.id}`, JSON.stringify(prefs))
+        setSuccess("Notification settings saved!")
+        setTimeout(() => setSuccess(""), 3000)
+      }
+    })
   }
 
   if (loading) {

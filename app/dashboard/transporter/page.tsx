@@ -1,13 +1,14 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
-import { Truck, Plus, CheckCircle, TrendingUp } from "lucide-react"
+import { clientApiGet, clientApiPost } from "@/lib/api-client"
+import { Profile, Vehicle } from "@/lib/types"
+import { Truck, Plus, CheckCircle } from "lucide-react"
 
 export default function TransporterOverview() {
-  const [session, setSession] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
-  const [vehicles, setVehicles] = useState<any[]>([])
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [vehicles, setVehicles] = useState<Vehicle[]>([])
 
   // Form states
   const [showAddForm, setShowAddForm] = useState(false)
@@ -17,76 +18,56 @@ export default function TransporterOverview() {
   const [pricePerKm, setPricePerKm] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [success, setSuccess] = useState(false)
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      if (session) {
-        fetchProfile(session.access_token)
-        fetchVehicles(session.access_token)
-      }
-    })
-  }, [])
-
-  const fetchProfile = async (token: string) => {
+  const fetchProfile = useCallback(async () => {
     try {
-      const res = await fetch(`http://localhost:4000/api/profile`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
+      const data = await clientApiGet<{ profile: Profile }>("profile")
+      if (data?.profile) {
         setProfile(data.profile)
       }
     } catch (err) {
       console.error(err)
     }
-  }
+  }, [])
 
-  const fetchVehicles = async (token: string) => {
+  const fetchVehicles = useCallback(async () => {
     try {
-      const res = await fetch("http://localhost:4000/api/transport/vehicles")
-      if (res.ok) {
-        const data = await res.json()
-        // Filter by transporter_id if present
-        setVehicles(data.vehicles || [])
+      const data = await clientApiGet<{ vehicles: Vehicle[] }>("transport/vehicles")
+      if (data?.vehicles) {
+        setVehicles(data.vehicles)
       }
     } catch (err) {
       console.error(err)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        fetchProfile()
+        fetchVehicles()
+      }
+    })
+  }, [fetchProfile, fetchVehicles])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError("")
-    setSuccess(false)
 
     try {
-      const res = await fetch("http://localhost:4000/api/transport/vehicles", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          type,
-          capacity_tons: Number(capacity),
-          plate_number: plateNumber,
-          price_per_km: Number(pricePerKm),
-        }),
+      await clientApiPost("transport/vehicles", {
+        type,
+        capacity_tons: Number(capacity),
+        plate_number: plateNumber,
+        price_per_km: Number(pricePerKm),
       })
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}))
-        throw new Error(errData.error || "Failed to create vehicle entry")
-      }
-
-      setSuccess(true)
       setShowAddForm(false)
-      fetchVehicles(session.access_token)
-    } catch (err: any) {
-      setError(err.message)
+      fetchVehicles()
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to create vehicle entry"
+      setError(msg)
     } finally {
       setLoading(false)
     }

@@ -1,9 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
+import { clientApiGet } from "@/lib/api-client"
+import { Profile } from "@/lib/types"
 import Link from "next/link"
-import { Home, Compass, FileText, Wallet, BarChart3, Plus, ArrowRight, ShieldAlert, CheckCircle2, ThermometerSun } from "lucide-react"
+import { Wallet, BarChart3, Plus, ArrowRight, ShieldAlert, FileText, ThermometerSun } from "lucide-react"
 
 interface Facility {
   id: string
@@ -27,37 +29,24 @@ interface Booking {
 }
 
 export default function WarehouseOverview() {
-  const [session, setSession] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [facilities, setFacilities] = useState<Facility[]>([])
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
+  const [balance, setBalance] = useState(420.0)
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      if (session) {
-        fetchProfile(session.access_token)
-        loadLocalData(session.user.id)
-      }
-    })
-  }, [])
-
-  const fetchProfile = async (token: string) => {
+  const fetchProfile = useCallback(async () => {
     try {
-      const res = await fetch("http://localhost:4000/api/profile", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
+      const data = await clientApiGet<{ profile: Profile }>("profile")
+      if (data?.profile) {
         setProfile(data.profile)
       }
     } catch (err) {
       console.error(err)
     }
-  }
+  }, [])
 
-  const loadLocalData = (userId: string) => {
+  const loadLocalData = useCallback((userId: string) => {
     setLoading(true)
     try {
       // 1. Facilities
@@ -89,12 +78,27 @@ export default function WarehouseOverview() {
         localStorage.setItem(`af_warehouse_bookings_${userId}`, JSON.stringify(bookList))
       }
       setBookings(bookList)
+
+      // 3. Wallet
+      const storedWallet = localStorage.getItem(`af_warehouse_wallet_${userId}`)
+      if (storedWallet) {
+        setBalance(JSON.parse(storedWallet).balance ?? 420.0)
+      }
     } catch (err) {
       console.error(err)
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        fetchProfile()
+        loadLocalData(session.user.id)
+      }
+    })
+  }, [fetchProfile, loadLocalData])
 
   // Calculations
   const totalCapacity = facilities.reduce((sum, f) => sum + f.capacity, 0)
@@ -103,11 +107,6 @@ export default function WarehouseOverview() {
 
   const activeLeases = bookings.filter((b) => b.status === "confirmed").length
   const pendingRequests = bookings.filter((b) => b.status === "pending").length
-
-  // Wallet
-  const walletKey = session?.user ? `af_warehouse_wallet_${session.user.id}` : ""
-  const storedWallet = typeof window !== "undefined" && walletKey ? localStorage.getItem(walletKey) : null
-  const balance = storedWallet ? JSON.parse(storedWallet).balance ?? 420.0 : 420.0
 
   return (
     <div className="space-y-8">

@@ -1,9 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
+import { clientApiGet } from "@/lib/api-client"
+import { Profile } from "@/lib/types"
 import Link from "next/link"
-import { ShoppingBag, TrendingUp, DollarSign, Package, AlertCircle, ArrowRight, Star, Plus } from "lucide-react"
+import { ShoppingBag, DollarSign, Package, AlertCircle, ArrowRight, Plus } from "lucide-react"
 
 interface Storefront {
   name: string
@@ -30,8 +32,7 @@ interface Order {
 }
 
 export default function VendorOverview() {
-  const [session, setSession] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [storefront, setStorefront] = useState<Storefront>({
     name: "My Agro-Input Shop",
     location: "Nairobi Agro-Hub",
@@ -41,38 +42,23 @@ export default function VendorOverview() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      if (session) {
-        fetchProfile(session.access_token)
-        loadLocalData(session.user.id)
-      }
-    })
-  }, [])
-
-  const fetchProfile = async (token: string) => {
+  const fetchProfile = useCallback(async () => {
     try {
-      const res = await fetch("http://localhost:4000/api/profile", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
+      const data = await clientApiGet<{ profile: Profile }>("profile")
+      if (data?.profile) {
         setProfile(data.profile)
       }
     } catch (err) {
       console.error(err)
     }
-  }
+  }, [])
 
-  const loadLocalData = (userId: string) => {
+  const loadLocalData = useCallback((userId: string) => {
     setLoading(true)
     try {
-      // Load storefront
       const storedStore = localStorage.getItem(`af_vendor_store_${userId}`)
       if (storedStore) setStorefront(JSON.parse(storedStore))
 
-      // Load products
       const storedProducts = localStorage.getItem(`af_vendor_products_${userId}`)
       let prodList: Product[] = []
       if (storedProducts) {
@@ -88,7 +74,6 @@ export default function VendorOverview() {
       }
       setProducts(prodList)
 
-      // Load orders
       const storedOrders = localStorage.getItem(`af_vendor_orders_${userId}`)
       let orderList: Order[] = []
       if (storedOrders) {
@@ -107,9 +92,17 @@ export default function VendorOverview() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  // Analytics calculations
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        fetchProfile()
+        loadLocalData(session.user.id)
+      }
+    })
+  }, [fetchProfile, loadLocalData])
+
   const totalSales = orders.filter((o) => o.status === "delivered").reduce((sum, o) => sum + o.totalPrice, 0)
   const pendingOrders = orders.filter((o) => o.status === "pending").length
   const lowStockProducts = products.filter((p) => p.quantity < 10)

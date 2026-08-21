@@ -1,8 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { clientApiGet } from "@/lib/api-client"
+import { Profile } from "@/lib/types"
 import DashboardSidebar from "@/components/layout/dashboard-sidebar"
 import DashboardHeader from "@/components/layout/dashboard-header"
 
@@ -14,13 +16,9 @@ export default function DashboardLayout({
   const router = useRouter()
   const pathname = usePathname()
   const [loading, setLoading] = useState(true)
-  const [role, setRole] = useState<any>(null)
+  const [role, setRole] = useState<Profile["role"] | null>(null)
 
-  useEffect(() => {
-    checkAuth()
-  }, [])
-
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
       router.push("/login")
@@ -28,20 +26,11 @@ export default function DashboardLayout({
     }
 
     try {
-      const res = await fetch("http://localhost:4000/api/profile", {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      })
-      if (!res.ok) {
-        throw new Error("Failed to fetch profile")
-      }
-      const data = await res.json()
+      const data = await clientApiGet<{ profile: Profile }>("profile")
       const userRole = data.profile?.role
       setRole(userRole)
 
-      // Simple auth guard to ensure user accesses their own role dashboard
-      if (pathname.startsWith("/dashboard/") && !pathname.includes(`/dashboard/${userRole}`)) {
+      if (userRole && pathname.startsWith("/dashboard/") && !pathname.includes(`/dashboard/${userRole}`)) {
         router.push(`/dashboard/${userRole}`)
       }
     } catch (err) {
@@ -50,7 +39,11 @@ export default function DashboardLayout({
     } finally {
       setLoading(false)
     }
-  }
+  }, [pathname, router])
+
+  useEffect(() => {
+    checkAuth()
+  }, [checkAuth])
 
   if (loading) {
     return (
@@ -62,7 +55,7 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-slate-950 flex">
-      <DashboardSidebar role={role} />
+      <DashboardSidebar role={role || "farmer"} />
       <div className="flex-1 flex flex-col min-w-0">
         <DashboardHeader />
         <main className="flex-1 p-8 overflow-y-auto">

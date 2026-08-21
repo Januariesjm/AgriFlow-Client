@@ -1,52 +1,40 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
+import { clientApiGet, clientApiPatch } from "@/lib/api-client"
+import { TransportRequest } from "@/lib/types"
 import { Truck, Check, MapPin, Navigation } from "lucide-react"
 
 export default function TransporterJobs() {
-  const [session, setSession] = useState<any>(null)
-  const [jobs, setJobs] = useState<any[]>([])
+  const [jobs, setJobs] = useState<TransportRequest[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      if (session) {
-        fetchJobs(session.access_token)
-      }
-    })
-  }, [])
-
-  const fetchJobs = async (token: string) => {
+  const fetchJobs = useCallback(async () => {
     try {
-      const res = await fetch("http://localhost:4000/api/transport/requests", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setJobs(data.requests || [])
+      const data = await clientApiGet<{ requests: TransportRequest[] }>("transport/requests")
+      if (data?.requests) {
+        setJobs(data.requests)
       }
     } catch (err) {
       console.error(err)
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        fetchJobs()
+      }
+    })
+  }, [fetchJobs])
 
   const acceptJob = async (jobId: string) => {
     try {
-      const res = await fetch(`http://localhost:4000/api/transport/requests/${jobId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ status: "accepted" }),
-      })
-      if (res.ok) {
-        fetchJobs(session.access_token)
-      }
+      await clientApiPatch(`transport/requests/${jobId}`, { status: "accepted" })
+      fetchJobs()
     } catch (err) {
       console.error(err)
     }
@@ -54,17 +42,8 @@ export default function TransporterJobs() {
 
   const updateDeliveryStatus = async (jobId: string, newStatus: string) => {
     try {
-      const res = await fetch(`http://localhost:4000/api/transport/requests/${jobId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ status: newStatus }),
-      })
-      if (res.ok) {
-        fetchJobs(session.access_token)
-      }
+      await clientApiPatch(`transport/requests/${jobId}`, { status: newStatus })
+      fetchJobs()
     } catch (err) {
       console.error(err)
     }
