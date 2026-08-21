@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useSession } from "@/lib/hooks/useSession"
 import { clientApiGet, clientApiPost, clientApiDelete } from "@/lib/api-client"
 import { loadWithFallback } from "@/lib/storageFallback"
@@ -20,6 +20,11 @@ export function useResourceWithFallback<T extends Identifiable>(
   const [error, setError] = useState<string>("")
   const [success, setSuccess] = useState<string>("")
 
+  const validatorRef = useRef(validator)
+  useEffect(() => {
+    validatorRef.current = validator
+  }, [validator])
+
   const getStorageKey = useCallback(() => {
     const userId = session?.user?.id || "guest"
     return `${storageKeyPrefix}_${userId}`
@@ -36,9 +41,10 @@ export function useResourceWithFallback<T extends Identifiable>(
         initialFallbackItems,
         `useResourceWithFallback[${apiEndpoint}]`
       )
-      if (data && validator) {
+      const currentValidator = validatorRef.current
+      if (data && currentValidator) {
         const validItems = data.filter((item) => {
-          const isValid = validator(item)
+          const isValid = currentValidator(item)
           if (!isValid) {
             logger.warn("useResourceWithFallback", `Resource payload failed Zod schema validation for ${apiEndpoint}`, item)
           }
@@ -54,7 +60,7 @@ export function useResourceWithFallback<T extends Identifiable>(
     } finally {
       setLoading(false)
     }
-  }, [apiEndpoint, getStorageKey, initialFallbackItems, validator])
+  }, [apiEndpoint, getStorageKey, initialFallbackItems])
 
   useEffect(() => {
     if (session !== undefined) {
