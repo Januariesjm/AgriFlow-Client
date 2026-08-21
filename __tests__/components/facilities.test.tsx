@@ -41,10 +41,10 @@ describe("Warehouse & Facilities Pages", () => {
   })
 
   test("validates form inputs on Facility registration submit", async () => {
-    render(<WarehouseFacilities />)
+    const { container } = render(<WarehouseFacilities />)
 
-    const submitBtn = screen.getByText("Add Depot to Directory")
-    fireEvent.click(submitBtn)
+    const form = container.querySelector("form")!
+    fireEvent.submit(form)
 
     // Requires facility name and address
     await waitFor(() => {
@@ -57,7 +57,7 @@ describe("Warehouse & Facilities Pages", () => {
 
     await waitFor(() => {
       expect(screen.getByText("My Warehouse Nodes & Sourcing Profile")).toBeInTheDocument()
-      expect(screen.getByText("Nairobi Central Depot")).toBeInTheDocument()
+      expect(screen.getAllByText("Nairobi Central Depot").length).toBeGreaterThan(0)
     })
   })
 })
