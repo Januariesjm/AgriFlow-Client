@@ -45,7 +45,7 @@ describe("FarmerWallet Page Component", () => {
     render(<FarmerWallet />)
 
     expect(screen.getByText("Escrow & Digital Wallet")).toBeInTheDocument()
-    expect(screen.getByText(/withdrawal disburse history/i)).toBeInTheDocument()
+    expect(screen.getByText(/outbound withdrawal history/i)).toBeInTheDocument()
   })
 
   test("handles withdrawal modal submit", async () => {
@@ -91,7 +91,7 @@ describe("FarmerWallet Page Component", () => {
     mockSavePayoutConfig.mockResolvedValue(true)
     render(<FarmerWallet />)
 
-    const saveConfigBtn = screen.getByRole("button", { name: /save settlement details/i })
+    const saveConfigBtn = screen.getByRole("button", { name: /update settlement account/i })
     fireEvent.click(saveConfigBtn)
 
     await waitFor(() => {
