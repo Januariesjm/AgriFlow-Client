@@ -1,26 +1,15 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { supabase } from "@/lib/supabase"
-import { Compass, Plus, Trash2, CheckCircle2, Globe, MapPin, Shield } from "lucide-react"
+import { useEffect, useState, useCallback } from "react"
+import { useSession } from "@/lib/hooks/useSession"
+import { clientApiGet, clientApiPost, clientApiDelete } from "@/lib/api-client"
+import { Facility } from "@/lib/types"
+import { Compass, Plus, Trash2, Globe, MapPin, Shield } from "lucide-react"
 import PlaceAutocomplete from "@/components/maps/PlaceAutocomplete"
 import GoogleMap from "@/components/maps/GoogleMap"
 
-interface Facility {
-  id: string
-  name: string
-  type: string
-  capacity: number
-  occupied: number
-  dailyRate: number
-  address: string
-  gpsLat: string
-  gpsLng: string
-  status: "active" | "full" | "maintenance"
-}
-
 export default function WarehouseFacilities() {
-  const [session, setSession] = useState<any>(null)
+  const { session } = useSession()
   const [facilities, setFacilities] = useState<Facility[]>([])
 
   // Form states
@@ -37,11 +26,12 @@ export default function WarehouseFacilities() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      if (session) {
-        // Load initial facilities from localStorage
+  const loadFacilities = useCallback(async () => {
+    try {
+      const data = await clientApiGet<Facility[]>("warehouse-owner/facilities")
+      setFacilities(data || [])
+    } catch {
+      if (session?.user) {
         const stored = localStorage.getItem(`af_warehouse_facilities_${session.user.id}`)
         if (stored) {
           setFacilities(JSON.parse(stored))
@@ -49,14 +39,20 @@ export default function WarehouseFacilities() {
           const defaultFac: Facility[] = [
             { id: "f1", name: "Rift Valley Cold Hub", type: "Cold Storage", capacity: 500, occupied: 320, dailyRate: 0.8, address: "Nakuru Industrial Block 4", gpsLat: "-0.3031", gpsLng: "36.0613", status: "active" },
             { id: "f2", name: "Nakuru Dry Silos", type: "Grain Silo", capacity: 1500, occupied: 950, dailyRate: 0.4, address: "Silo Road, Section 5, Nakuru", gpsLat: "-0.2831", gpsLng: "36.0713", status: "active" },
-            { id: "f3", name: "Molo Ambient Store", type: "Ambient Dry", capacity: 800, occupied: 120, dailyRate: 0.3, address: "Molo Town Depot B", gpsLat: "-0.2483", gpsLng: "35.7314", status: "active" }
+            { id: "f3", name: "Molo Ambient Store", type: "Ambient Dry", capacity: 800, occupied: 120, dailyRate: 0.3, address: "Molo Town Depot B", gpsLat: "-0.2483", gpsLng: "35.7314", status: "active" },
           ]
           setFacilities(defaultFac)
           localStorage.setItem(`af_warehouse_facilities_${session.user.id}`, JSON.stringify(defaultFac))
         }
       }
-    })
-  }, [])
+    }
+  }, [session])
+
+  useEffect(() => {
+    if (session) {
+      loadFacilities()
+    }
+  }, [session, loadFacilities])
 
   const saveFacilities = (list: Facility[]) => {
     setFacilities(list)
@@ -65,7 +61,7 @@ export default function WarehouseFacilities() {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError("")
@@ -92,8 +88,7 @@ export default function WarehouseFacilities() {
         throw new Error("Please provide valid numeric GPS coordinates.")
       }
 
-      const newFacility: Facility = {
-        id: `fac-${Date.now()}`,
+      const payload = {
         name,
         type,
         capacity: capVal,
@@ -102,28 +97,41 @@ export default function WarehouseFacilities() {
         address,
         gpsLat,
         gpsLng,
-        status
+        status,
       }
 
-      const updated = [newFacility, ...facilities]
-      saveFacilities(updated)
+      try {
+        const created = await clientApiPost<Facility>("warehouse-owner/facilities", payload)
+        saveFacilities([created, ...facilities])
+      } catch {
+        const fallback: Facility = {
+          id: `fac-${Date.now()}`,
+          ...payload,
+        }
+        saveFacilities([fallback, ...facilities])
+      }
 
-      // Reset
       setName("")
       setCapacity("")
       setDailyRate("")
       setAddress("")
       setSuccess("Storage facility registered successfully!")
       setTimeout(() => setSuccess(""), 4000)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "An error occurred while registering facility"
+      setError(msg)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to remove this storage depot?")) return
+    try {
+      await clientApiDelete(`warehouse-owner/facilities/${id}`)
+    } catch {
+      // Local fallback
+    }
     const updated = facilities.filter((f) => f.id !== id)
     saveFacilities(updated)
     setSuccess("Facility removed.")
@@ -132,7 +140,7 @@ export default function WarehouseFacilities() {
 
   const toggleStatus = (id: string, current: Facility["status"]) => {
     const nextStatus: Facility["status"] = current === "active" ? "full" : current === "full" ? "maintenance" : "active"
-    const updated = facilities.map((f) => f.id === id ? { ...f, status: nextStatus } : f)
+    const updated = facilities.map((f) => (f.id === id ? { ...f, status: nextStatus } : f))
     saveFacilities(updated)
     setSuccess(`Facility status updated to ${nextStatus}!`)
     setTimeout(() => setSuccess(""), 4000)
@@ -201,7 +209,7 @@ export default function WarehouseFacilities() {
                 <label className="block text-xs font-bold text-muted-foreground uppercase mb-1.5">Status</label>
                 <select
                   value={status}
-                  onChange={(e) => setStatus(e.target.value as any)}
+                  onChange={(e) => setStatus(e.target.value as Facility["status"])}
                   className="w-full bg-slate-900 border border-border rounded-lg px-4 py-2.5 text-sm text-foreground focus:outline-none"
                 >
                   <option value="active">Active</option>

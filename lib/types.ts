@@ -194,3 +194,29 @@ export interface NotificationPrefs {
   weatherAlerts?: boolean
   maxSourcingRange?: string
 }
+
+export interface Facility {
+  id: string
+  name: string
+  type: string
+  capacity: number
+  occupied: number
+  dailyRate: number
+  address: string
+  gpsLat: string
+  gpsLng: string
+  status: "active" | "full" | "maintenance"
+}
+
+export interface Warehouse {
+  id: string
+  name: string
+  location: string
+  capacity: number
+  storageType: string
+  gpsLat: number
+  gpsLng: number
+  status: "active" | "inactive"
+  createdAt: string
+}
+
