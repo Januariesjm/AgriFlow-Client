@@ -111,13 +111,29 @@ const EQUIPMENT_LISTINGS = [
   }
 ]
 
+interface EquipmentItem {
+  id: number
+  name: string
+  category: string
+  type: string
+  price: number
+  unit: string
+  region: string
+  rating: number
+  reviews: number
+  image: string
+  specs: string
+  provider: string
+  available: boolean
+}
+
 export default function EquipmentsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [selectedType, setSelectedType] = useState("All") // All, rent, buy
   
   // Booking modal state
-  const [bookingItem, setBookingItem] = useState<any>(null)
+  const [bookingItem, setBookingItem] = useState<EquipmentItem | null>(null)
   const [bookingDays, setBookingDays] = useState(3)
   const [bookingAddress, setBookingAddress] = useState("")
   const [bookingConfirmed, setBookingConfirmed] = useState(false)
@@ -134,7 +150,7 @@ export default function EquipmentsPage() {
     return matchesSearch && matchesCategory && matchesType
   })
 
-  const handleOpenBooking = (item: any) => {
+  const handleOpenBooking = (item: EquipmentItem) => {
     setBookingItem(item)
     setBookingConfirmed(false)
     setBookingAddress("")

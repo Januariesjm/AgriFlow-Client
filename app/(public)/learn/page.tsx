@@ -103,12 +103,18 @@ const SYMPTOMS_LIST = [
   { id: "rotting_fruit", label: "Fruit rotting at bottom (black spot)" },
 ]
 
+interface DiagnosisResult {
+  name: string
+  cause: string
+  remedy: string
+}
+
 export default function LearnPage() {
   const [activeGuide, setActiveGuide] = useState("maize")
   
   // Symptom checklist state
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([])
-  const [diagnosisResult, setDiagnosisResult] = useState<any>(null)
+  const [diagnosisResult, setDiagnosisResult] = useState<DiagnosisResult | null>(null)
   const [diagnosing, setDiagnosing] = useState(false)
 
   const toggleSymptom = (symptomId: string) => {
