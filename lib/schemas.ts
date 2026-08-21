@@ -84,3 +84,68 @@ export const FacilitySchema = z.object({
 
 export type FacilitySchemaType = z.infer<typeof FacilitySchema>
 
+export const ProfileSchema = z.object({
+  id: z.string(),
+  email: z.string().email(),
+  full_name: z.string(),
+  phone: z.string().optional(),
+  role: z.enum(["farmer", "buyer", "transporter", "vendor", "warehouse_owner", "admin"]),
+  avatar_url: z.string().optional(),
+  country: z.string(),
+  region: z.string().optional(),
+  gps_lat: z.number().optional(),
+  gps_lng: z.number().optional(),
+  is_verified: z.boolean(),
+  created_at: z.string(),
+  updated_at: z.string().optional(),
+})
+
+export type ProfileSchemaType = z.infer<typeof ProfileSchema>
+
+export const WalletBalanceSchema = z.object({
+  available_balance: z.number(),
+  locked_balance: z.number(),
+  deposits: z.array(z.object({
+    id: z.string(),
+    amount: z.number(),
+    method: z.string(),
+    reference: z.string(),
+    status: z.enum(["pending", "completed", "failed"]),
+    created_at: z.string(),
+  })),
+  withdrawals: z.array(z.object({
+    id: z.string(),
+    amount: z.number(),
+    method: z.string(),
+    destination: z.string(),
+    status: z.enum(["pending", "completed", "failed"]),
+    created_at: z.string(),
+  })),
+})
+
+export type WalletBalance = z.infer<typeof WalletBalanceSchema>
+
+export const ProductSchema = z.object({
+  id: z.string(),
+  farmer_id: z.string(),
+  farm_id: z.string().optional(),
+  name: z.string().min(1),
+  category: z.string(),
+  description: z.string().optional(),
+  quantity: z.number(),
+  unit: z.string(),
+  price: z.number(),
+  currency: z.string(),
+  country: z.string(),
+  region: z.string(),
+  gps_lat: z.number(),
+  gps_lng: z.number(),
+  harvest_date: z.string().optional(),
+  quality_grade: z.enum(["A", "B", "C", "Ungraded"]),
+  images: z.array(z.string()).optional(),
+  status: z.enum(["active", "sold", "expired", "draft"]),
+  created_at: z.string(),
+})
+
+export type ProductSchemaType = z.infer<typeof ProductSchema>
+
