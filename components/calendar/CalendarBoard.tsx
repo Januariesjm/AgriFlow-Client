@@ -2,6 +2,13 @@
 
 import { useState } from "react"
 import { CalendarDays, Plus, Trash2, Sprout, Check, LucideIcon } from "lucide-react"
+import EventForm from "./EventForm"
+import {
+  getCalendarDays,
+  getEventsForDay as getDayEvents,
+  filterEventsByMonth,
+  getUpcomingEvents,
+} from "@/lib/calendar-utils"
 
 export interface CalendarEvent {
   id: string
@@ -66,12 +73,6 @@ export default function CalendarBoard({
   })
 
   const [showForm, setShowForm] = useState(false)
-  const [eventTitle, setEventTitle] = useState("")
-  const [crop, setCrop] = useState(crops[0] || "Maize")
-  const [type, setType] = useState<string>(eventTypes[0]?.value || "planting")
-  const [date, setDate] = useState("")
-  const [notes, setNotes] = useState("")
-
   const [viewMonth, setViewMonth] = useState(new Date().getMonth())
   const [viewYear, setViewYear] = useState(new Date().getFullYear())
 
@@ -82,22 +83,14 @@ export default function CalendarBoard({
     }
   }
 
-  const handleAdd = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleAddEvent = (rawEvent: Omit<CalendarEvent, "id" | "completed">) => {
     const newEvent: CalendarEvent = {
       id: `evt-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      title: eventTitle,
-      crop,
-      type,
-      date,
-      notes,
+      ...rawEvent,
       completed: false,
     }
     saveEvents([newEvent, ...events])
     setShowForm(false)
-    setEventTitle("")
-    setNotes("")
-    setDate("")
   }
 
   const toggleComplete = (id: string) => {
@@ -108,26 +101,10 @@ export default function CalendarBoard({
     saveEvents(events.filter((e) => e.id !== id))
   }
 
-  // Group events by month for current view
-  const currentMonthEvents = events
-    .filter((e) => {
-      const d = new Date(e.date)
-      return d.getMonth() === viewMonth && d.getFullYear() === viewYear
-    })
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-
-  // Calendar grid calculation
-  const firstDay = new Date(viewYear, viewMonth, 1).getDay()
-  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
-  const calendarDays: (number | null)[] = []
-  for (let i = 0; i < firstDay; i++) calendarDays.push(null)
-  for (let i = 1; i <= daysInMonth; i++) calendarDays.push(i)
-
-  const getEventsForDay = (day: number) =>
-    events.filter((e) => {
-      const d = new Date(e.date)
-      return d.getDate() === day && d.getMonth() === viewMonth && d.getFullYear() === viewYear
-    })
+  // Pure functions from calendar-utils
+  const currentMonthEvents = filterEventsByMonth(events, viewYear, viewMonth)
+  const calendarDays = getCalendarDays(viewYear, viewMonth)
+  const getEventsForDay = (day: number) => getDayEvents(events, day, viewYear, viewMonth)
 
   const prevMonth = () => {
     if (viewMonth === 0) {
@@ -148,10 +125,7 @@ export default function CalendarBoard({
   }
 
   const today = new Date()
-  const upcoming = events
-    .filter((e) => !e.completed && new Date(e.date) >= new Date(today.toDateString()))
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(0, 5)
+  const upcoming = getUpcomingEvents(events, 5, today)
 
   return (
     <div className="space-y-8">
@@ -172,82 +146,9 @@ export default function CalendarBoard({
         </button>
       </div>
 
-      {/* Form */}
+      {/* Form Child Component */}
       {showForm && (
-        <div className="glass p-8 rounded-xl">
-          <h3 className="text-xl font-bold text-white mb-6">Schedule Event</h3>
-          <form onSubmit={handleAdd} className="space-y-5">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-muted-foreground mb-1.5">Event Title</label>
-                <input
-                  type="text"
-                  required
-                  value={eventTitle}
-                  onChange={(e) => setEventTitle(e.target.value)}
-                  placeholder="Title..."
-                  className="w-full bg-slate-900 border border-border rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-primary"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-muted-foreground mb-1.5">Commodity / Crop</label>
-                <select
-                  value={crop}
-                  onChange={(e) => setCrop(e.target.value)}
-                  className="w-full bg-slate-900 border border-border rounded-lg px-4 py-2 text-sm text-foreground focus:outline-none focus:border-primary"
-                >
-                  {crops.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-muted-foreground mb-1.5">Type</label>
-                <select
-                  value={type}
-                  onChange={(e) => setType(e.target.value)}
-                  className="w-full bg-slate-900 border border-border rounded-lg px-4 py-2 text-sm text-foreground focus:outline-none focus:border-primary"
-                >
-                  {eventTypes.map((t) => (
-                    <option key={t.value} value={t.value}>
-                      {t.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-muted-foreground mb-1.5">Scheduled Date</label>
-                <input
-                  type="date"
-                  required
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="w-full bg-slate-900 border border-border rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-primary"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-muted-foreground mb-1.5">Notes (Optional)</label>
-                <input
-                  type="text"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Notes..."
-                  className="w-full bg-slate-900 border border-border rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-primary"
-                />
-              </div>
-            </div>
-            <button
-              type="submit"
-              className="bg-primary hover:bg-primary/95 text-primary-foreground font-semibold px-6 py-2.5 rounded-lg text-sm transition-all cursor-pointer shadow"
-            >
-              Save Event
-            </button>
-          </form>
-        </div>
+        <EventForm crops={crops} eventTypes={eventTypes} onAddEvent={handleAddEvent} />
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
