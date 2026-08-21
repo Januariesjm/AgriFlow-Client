@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { useSession } from "@/lib/hooks/useSession"
+import { logger } from "@/lib/logger"
 import { clientApiGet, clientApiPost } from "@/lib/api-client"
 import { Deposit, Withdrawal } from "@/lib/types"
 import { Wallet, ArrowDownLeft, ArrowUpRight, RefreshCw, CheckCircle2, AlertCircle, Smartphone, CreditCard } from "lucide-react"
@@ -43,7 +44,8 @@ export default function BuyerWallet() {
       })
       setDeposits(data.deposits || [])
       setWithdrawals(data.withdrawals || [])
-    } catch {
+    } catch (err: unknown) {
+      logger.warn("BuyerWallet", "Failed to fetch wallet data from API, using fallback calculations", err)
       // Fallback local calculations for UI resilience
       setBalance({ available: 320000, locked: 85000 })
       setDeposits([

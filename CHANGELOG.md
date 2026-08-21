@@ -5,6 +5,20 @@ All notable changes to the AgriFlow Client project will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Generic custom data hook `lib/hooks/useResourceWithFallback.ts` for unified API fetching, Zod validation, and structured fallback caching.
+- Test double infrastructure: `lib/testUtils/mockSupabaseClient.ts` reusable mock client and `__tests__/__mocks__/api.ts` API mock layer.
+- Feature unit test suites for `PlantNextPage` (`__tests__/app/plant-next.test.tsx`) and `Marketplace` (`__tests__/app/products.test.tsx`).
+- Weekly automated dependency updates via `.github/dependabot.yml`.
+
+### Changed
+- Enforced strict 60% coverage gate in `.github/workflows/ci.yml` with `--coverage --ci` flags.
+- Refactored `MyWarehouses` and `WarehouseFacilities` components to consume `useResourceWithFallback`, eliminating duplicated inline localStorage logic.
+- Pinned exact dependency versions in `package.json` for deterministic CI builds.
+- Added structured logging context tags using `logger.warn`/`logger.error` across fallback catch blocks.
+
 ## [0.2.0] - 2026-08-21
 
 ### Added
