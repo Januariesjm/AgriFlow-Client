@@ -28,7 +28,7 @@ jobs:
         run: npm ci
 
       - name: Dependency Security Audit
-        run: npm audit --audit-level=high || true
+        run: npm audit --audit-level=high
 
       - name: Typecheck TypeScript
         run: npx tsc --noEmit
