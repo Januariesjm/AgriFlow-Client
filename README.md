@@ -1,17 +1,18 @@
 # AgriFlow Client
 
-AgriFlow Client is a modern Next.js agricultural supply chain platform connecting farmers, buyers, transporters, vendors, and warehouse owners across regional markets.
+AgriFlow Client is a modern Next.js 16 agricultural supply chain platform connecting farmers, buyers, transporters, vendors, and warehouse owners across regional markets.
 
 ---
 
 ## 🛠 Tech Stack & Architecture
 
-- **Framework:** Next.js 16 (App Router)
-- **State & Data Fetching:** TanStack Query (React Query) & Supabase Client
+- **Framework:** Next.js 16 (App Router) with standalone production build
+- **State & Data Fetching:** Centralized API client layer (`lib/api.ts`, `lib/api-client.ts`) with custom React hooks
 - **Authentication:** Supabase Auth with JWT bearer token verification
-- **Validation & Schemas:** Zod schema validation
+- **Validation & Schemas:** Zod schema validation (`lib/schemas.ts`)
 - **Styling:** Tailwind CSS & Lucide Icons
 - **Testing:** Jest, React Testing Library, and jsdom
+- **Containerization:** Docker & Docker Compose
 
 ---
 
@@ -30,6 +31,7 @@ Ensure the following keys are populated in your `.env.local`:
 - `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase Project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase Anonymous Public Key
 - `NEXT_PUBLIC_API_BASE_URL`: AgriFlow Backend API URL (default: `http://localhost:4000/api`)
+- `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`: Google Maps JavaScript API Key
 
 ### 2. Development Server
 
@@ -44,9 +46,21 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
+## 🐳 Docker Deployment
+
+Start the entire application in an isolated container environment:
+
+```bash
+docker compose up --build
+```
+
+The application will be accessible at [http://localhost:3000](http://localhost:3000).
+
+---
+
 ## 🧪 Testing & Quality Assurance
 
-AgriFlow Client enforces strict quality gates covering type safety, linting, and automated unit/component tests.
+AgriFlow Client enforces strict quality gates covering type safety, linting, and automated unit/component tests with coverage enforcement.
 
 ### Run Unit & Component Tests
 
@@ -54,7 +68,7 @@ AgriFlow Client enforces strict quality gates covering type safety, linting, and
 npm test
 ```
 
-Runs the Jest test suite with coverage report generation. All custom utilities (`lib/api.ts`, `lib/api-client.ts`, `lib/checkout.ts`, `lib/admin.ts`), schemas, and critical pages are covered.
+Runs the Jest test suite with coverage report generation and threshold verification (60% global coverage).
 
 ### Run TypeScript Type Check
 
@@ -78,16 +92,18 @@ Runs ESLint to verify code quality and style compliance.
 
 This repository includes a GitHub Actions workflow located at `.github/workflows/ci.yml`. On every push and pull request to `main`, `master`, or `develop`, the pipeline executes:
 
-1. **Dependency Installation:** `npm ci`
-2. **Type Check:** `npx tsc --noEmit`
-3. **Lint Check:** `npm run lint`
-4. **Test Suite:** `npm test`
+1. **Environment Verification:** Check `.env.example` existence
+2. **Dependency Installation:** `npm ci`
+3. **Security Audit:** `npm audit --audit-level=high`
+4. **Type Check:** `npx tsc --noEmit`
+5. **Lint Check:** `npm run lint`
+6. **Test Suite & Coverage:** `npm test`
 
 ---
 
 ## 📦 Production Build
 
-To build the project for production deployment:
+To build the project locally for production deployment:
 
 ```bash
 npm run build
