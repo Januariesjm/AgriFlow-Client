@@ -1,14 +1,15 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
+import { clientApiGet, clientApiPost, clientApiPut } from "@/lib/api-client"
+import { Farm } from "@/lib/types"
 import { Compass, CheckCircle } from "lucide-react"
 import PlaceAutocomplete from "@/components/maps/PlaceAutocomplete"
 import GoogleMap from "@/components/maps/GoogleMap"
 
 export default function MyFarm() {
-  const [session, setSession] = useState<any>(null)
-  const [farms, setFarms] = useState<any[]>([])
+  const [farms, setFarms] = useState<Farm[]>([])
   const [name, setName] = useState("")
   const [location, setLocation] = useState("")
   const [farmSize, setFarmSize] = useState("")
@@ -20,24 +21,12 @@ export default function MyFarm() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      if (session) {
-        fetchFarms(session.access_token)
-      }
-    })
-  }, [])
-
-  const fetchFarms = async (token: string) => {
+  const fetchFarms = useCallback(async () => {
     try {
-      const res = await fetch("http://localhost:4000/api/farms", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setFarms(data.farms || [])
-        if (data.farms?.length > 0) {
+      const data = await clientApiGet<{ farms: Farm[] }>("farms")
+      if (data?.farms) {
+        setFarms(data.farms)
+        if (data.farms.length > 0) {
           const farm = data.farms[0]
           setName(farm.name)
           setLocation(farm.location)
@@ -51,7 +40,15 @@ export default function MyFarm() {
     } catch (err) {
       console.error(err)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        fetchFarms()
+      }
+    })
+  }, [fetchFarms])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -61,40 +58,29 @@ export default function MyFarm() {
 
     try {
       const isEditing = farms.length > 0
-      const url = isEditing
-        ? `http://localhost:4000/api/farms/${farms[0].id}`
-        : "http://localhost:4000/api/farms"
+      const payload = {
+        name,
+        location,
+        country: "Kenya",
+        region: location,
+        farm_size: Number(farmSize),
+        soil_type: soilType,
+        water_source: waterSource,
+        gps_lat: Number(gpsLat),
+        gps_lng: Number(gpsLng),
+      }
 
-      const method = isEditing ? "PUT" : "POST"
-
-      const res = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          name,
-          location,
-          country: "Kenya", // default
-          region: location,
-          farm_size: Number(farmSize),
-          soil_type: soilType,
-          water_source: waterSource,
-          gps_lat: Number(gpsLat),
-          gps_lng: Number(gpsLng),
-        }),
-      })
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}))
-        throw new Error(errData.error || "Failed to save farm profile")
+      if (isEditing) {
+        await clientApiPut(`farms/${farms[0].id}`, payload)
+      } else {
+        await clientApiPost("farms", payload)
       }
 
       setSuccess(true)
-      fetchFarms(session.access_token)
-    } catch (err: any) {
-      setError(err.message)
+      fetchFarms()
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to save farm profile"
+      setError(msg)
     } finally {
       setLoading(false)
     }

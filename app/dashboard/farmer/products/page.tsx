@@ -1,13 +1,14 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
+import { clientApiGet, clientApiPost, clientApiDelete } from "@/lib/api-client"
+import { Product, Farm } from "@/lib/types"
 import { Plus, Trash2, Sprout, ShoppingBag } from "lucide-react"
 
 export default function MyProducts() {
-  const [session, setSession] = useState<any>(null)
-  const [products, setProducts] = useState<any[]>([])
-  const [farms, setFarms] = useState<any[]>([])
+  const [products, setProducts] = useState<Product[]>([])
+  const [farms, setFarms] = useState<Farm[]>([])
 
   // Form states
   const [showAddForm, setShowAddForm] = useState(false)
@@ -26,39 +27,23 @@ export default function MyProducts() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      if (session) {
-        fetchMyProducts(session.access_token)
-        fetchFarms(session.access_token)
-      }
-    })
-  }, [])
-
-  const fetchMyProducts = async (token: string) => {
+  const fetchMyProducts = useCallback(async () => {
     try {
-      const res = await fetch("http://localhost:4000/api/products/my", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setProducts(data.products || [])
+      const data = await clientApiGet<{ products: Product[] }>("products/my")
+      if (data?.products) {
+        setProducts(data.products)
       }
     } catch (err) {
       console.error(err)
     }
-  }
+  }, [])
 
-  const fetchFarms = async (token: string) => {
+  const fetchFarms = useCallback(async () => {
     try {
-      const res = await fetch("http://localhost:4000/api/farms", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setFarms(data.farms || [])
-        if (data.farms?.length > 0) {
+      const data = await clientApiGet<{ farms: Farm[] }>("farms")
+      if (data?.farms) {
+        setFarms(data.farms)
+        if (data.farms.length > 0) {
           setFarmId(data.farms[0].id)
           setGpsLat(data.farms[0].gps_lat.toString())
           setGpsLng(data.farms[0].gps_lng.toString())
@@ -67,7 +52,16 @@ export default function MyProducts() {
     } catch (err) {
       console.error(err)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        fetchMyProducts()
+        fetchFarms()
+      }
+    })
+  }, [fetchMyProducts, fetchFarms])
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -75,47 +69,34 @@ export default function MyProducts() {
     setError("")
 
     try {
-      // Find selected farm to populate region & country
       const selectedFarm = farms.find((f) => f.id === farmId)
       const country = selectedFarm?.country || "Kenya"
       const region = selectedFarm?.region || "Nakuru"
 
-      const res = await fetch("http://localhost:4000/api/products", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          name,
-          category,
-          description,
-          quantity: Number(quantity),
-          unit,
-          price: Number(price),
-          country,
-          region,
-          gps_lat: Number(gpsLat),
-          gps_lng: Number(gpsLng),
-          harvest_date: harvestDate || undefined,
-          quality_grade: qualityGrade,
-          farm_id: farmId || undefined,
-        }),
+      await clientApiPost("products", {
+        name,
+        category,
+        description,
+        quantity: Number(quantity),
+        unit,
+        price: Number(price),
+        country,
+        region,
+        gps_lat: Number(gpsLat),
+        gps_lng: Number(gpsLng),
+        harvest_date: harvestDate || undefined,
+        quality_grade: qualityGrade,
+        farm_id: farmId || undefined,
       })
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}))
-        throw new Error(errData.error || "Failed to create crop listing")
-      }
-
       setShowAddForm(false)
-      // Reset fields
       setDescription("")
       setQuantity("")
       setPrice("")
-      fetchMyProducts(session.access_token)
-    } catch (err: any) {
-      setError(err.message)
+      fetchMyProducts()
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to create crop listing"
+      setError(msg)
     } finally {
       setLoading(false)
     }
@@ -124,15 +105,8 @@ export default function MyProducts() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to remove this crop listing?")) return
     try {
-      const res = await fetch(`http://localhost:4000/api/products/${id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      })
-      if (res.ok) {
-        fetchMyProducts(session.access_token)
-      }
+      await clientApiDelete(`products/${id}`)
+      fetchMyProducts()
     } catch (err) {
       console.error(err)
     }

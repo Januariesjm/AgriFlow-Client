@@ -1,53 +1,40 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
+import { clientApiGet, clientApiPatch } from "@/lib/api-client"
+import { Order } from "@/lib/types"
 import { FileText, Phone, Mail, Check, Truck, CheckCircle2 } from "lucide-react"
 
 export default function FarmerOrders() {
-  const [session, setSession] = useState<any>(null)
-  const [orders, setOrders] = useState<any[]>([])
+  const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      if (session) {
-        fetchOrders(session.access_token)
-      }
-    })
-  }, [])
-
-  const fetchOrders = async (token: string) => {
+  const fetchOrders = useCallback(async () => {
     try {
-      const res = await fetch("http://localhost:4000/api/orders?role=farmer", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setOrders(data.orders || [])
+      const data = await clientApiGet<{ orders: Order[] }>("orders?role=farmer")
+      if (data?.orders) {
+        setOrders(data.orders)
       }
     } catch (err) {
       console.error(err)
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        fetchOrders()
+      }
+    })
+  }, [fetchOrders])
 
   const updateStatus = async (orderId: string, newStatus: string) => {
     try {
-      const res = await fetch(`http://localhost:4000/api/orders/${orderId}/status`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ status: newStatus }),
-      })
-
-      if (res.ok) {
-        fetchOrders(session.access_token)
-      }
+      await clientApiPatch(`orders/${orderId}/status`, { status: newStatus })
+      fetchOrders()
     } catch (err) {
       console.error(err)
     }

@@ -1,78 +1,52 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
-import { BarChart3, TrendingUp, PieChart, ArrowUp, ArrowDown, Minus, CalendarDays, Package } from "lucide-react"
-
-interface OrderData {
-  id: string
-  status: string
-  total_price: number
-  quantity: number
-  unit_price: number
-  created_at: string
-  product?: { name: string; category: string; unit: string }
-  buyer?: { full_name: string; country: string }
-}
-
-interface ProductData {
-  id: string
-  name: string
-  category: string
-  quantity: number
-  unit: string
-  price: number
-  status: string
-  created_at: string
-}
+import { clientApiGet } from "@/lib/api-client"
+import { Order, Product } from "@/lib/types"
+import { BarChart3, TrendingUp, PieChart, Package } from "lucide-react"
 
 export default function FarmerAnalytics() {
-  const [orders, setOrders] = useState<OrderData[]>([])
-  const [products, setProducts] = useState<ProductData[]>([])
+  const [orders, setOrders] = useState<Order[]>([])
+  const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) fetchAll(session.access_token)
-    })
-  }, [])
-
-  const fetchAll = async (token: string) => {
+  const fetchAll = useCallback(async () => {
     setLoading(true)
     try {
-      const [ordersRes, productsRes] = await Promise.all([
-        fetch("http://localhost:4000/api/orders?role=farmer", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch("http://localhost:4000/api/products/my", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
+      const [ordersData, productsData] = await Promise.all([
+        clientApiGet<{ orders: Order[] }>("orders?role=farmer"),
+        clientApiGet<{ products: Product[] }>("products/my"),
       ])
 
-      if (ordersRes.ok) {
-        const d = await ordersRes.json()
-        setOrders(d.orders || [])
+      if (ordersData?.orders) {
+        setOrders(ordersData.orders)
       }
-      if (productsRes.ok) {
-        const d = await productsRes.json()
-        setProducts(d.products || [])
+      if (productsData?.products) {
+        setProducts(productsData.products)
       }
     } catch (err) {
       console.error(err)
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  // ─── Computed analytics ───────────────────────────────────────
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) fetchAll()
+    })
+  }, [fetchAll])
+
+  // Computed analytics
   const nonCancelledOrders = orders.filter((o) => o.status !== "cancelled")
   const deliveredOrders = orders.filter((o) => o.status === "delivered")
   const pendingOrders = orders.filter((o) => o.status === "pending")
   const confirmedOrders = orders.filter((o) => o.status === "confirmed")
   const inTransitOrders = orders.filter((o) => o.status === "in_transit")
 
-  const totalRevenue = deliveredOrders.reduce((s, o) => s + o.total_price, 0)
-  const totalOrderValue = nonCancelledOrders.reduce((s, o) => s + o.total_price, 0)
+  const totalRevenue = deliveredOrders.reduce((s, o) => s + (o.total_price || 0), 0)
+  const totalOrderValue = nonCancelledOrders.reduce((s, o) => s + (o.total_price || 0), 0)
   const avgOrderValue = nonCancelledOrders.length > 0 ? totalOrderValue / nonCancelledOrders.length : 0
   const conversionRate = orders.length > 0 ? (deliveredOrders.length / orders.length) * 100 : 0
 
@@ -89,7 +63,7 @@ export default function FarmerAnalytics() {
         const od = new Date(o.created_at)
         return od.getMonth() === monthNum && od.getFullYear() === year
       })
-      .reduce((s, o) => s + o.total_price, 0)
+      .reduce((s, o) => s + (o.total_price || 0), 0)
     monthlyRevenue.push({ label: `${month}`, value: sum })
   }
   const maxMonthlyRevenue = Math.max(...monthlyRevenue.map((m) => m.value), 1)
@@ -98,7 +72,7 @@ export default function FarmerAnalytics() {
   const categoryMap = new Map<string, number>()
   nonCancelledOrders.forEach((o) => {
     const cat = o.product?.category || "Unknown"
-    categoryMap.set(cat, (categoryMap.get(cat) || 0) + o.total_price)
+    categoryMap.set(cat, (categoryMap.get(cat) || 0) + (o.total_price || 0))
   })
   const categoryBreakdown = Array.from(categoryMap.entries())
     .map(([category, revenue]) => ({ category, revenue }))
@@ -116,7 +90,7 @@ export default function FarmerAnalytics() {
     const name = o.product?.name || "Unknown"
     const existing = productSales.get(name) || { name, orders: 0, revenue: 0 }
     existing.orders += 1
-    existing.revenue += o.total_price
+    existing.revenue += o.total_price || 0
     productSales.set(name, existing)
   })
   const topProducts = Array.from(productSales.values())
@@ -129,7 +103,7 @@ export default function FarmerAnalytics() {
     const name = o.buyer?.full_name || "Anonymous"
     const existing = buyerMap.get(name) || { name, orders: 0, spent: 0 }
     existing.orders += 1
-    existing.spent += o.total_price
+    existing.spent += o.total_price || 0
     buyerMap.set(name, existing)
   })
   const topBuyers = Array.from(buyerMap.values())

@@ -1,70 +1,50 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
-import { Truck, MapPin, Navigation, Calendar, CheckCircle2, AlertCircle, RefreshCw, Plus } from "lucide-react"
+import { clientApiGet, clientApiPost } from "@/lib/api-client"
+import { Order, Farm, Vehicle, TransportRequest } from "@/lib/types"
+import { Truck, Navigation, CheckCircle2, AlertCircle, RefreshCw, Plus } from "lucide-react"
 import RouteMap from "@/components/maps/RouteMap"
 
 export default function FarmerLogistics() {
-  const [session, setSession] = useState<any>(null)
-  const [orders, setOrders] = useState<any[]>([])
-  const [farms, setFarms] = useState<any[]>([])
-  const [vehicles, setVehicles] = useState<any[]>([])
-  const [transportRequests, setTransportRequests] = useState<any[]>([])
+  const [orders, setOrders] = useState<Order[]>([])
+  const [farms, setFarms] = useState<Farm[]>([])
+  const [vehicles, setVehicles] = useState<Vehicle[]>([])
+  const [transportRequests, setTransportRequests] = useState<TransportRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
-  const [selectedRequest, setSelectedRequest] = useState<any>(null)
+  const [selectedRequest, setSelectedRequest] = useState<TransportRequest | null>(null)
 
   // Form state
   const [selectedOrderId, setSelectedOrderId] = useState("")
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      if (session) {
-        fetchDashboardData(session.access_token)
-      }
-    })
-  }, [])
-
-  const fetchDashboardData = async (token: string) => {
+  const fetchDashboardData = useCallback(async () => {
     setLoading(true)
     setError("")
     try {
-      const [ordersRes, farmsRes, vehiclesRes, requestsRes] = await Promise.all([
-        fetch("http://localhost:4000/api/orders?role=farmer", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch("http://localhost:4000/api/farms", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch("http://localhost:4000/api/transport/vehicles", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch("http://localhost:4000/api/transport/requests", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
+      const [ordersData, farmsData, vehiclesData, requestsData] = await Promise.all([
+        clientApiGet<{ orders: Order[] }>("orders?role=farmer"),
+        clientApiGet<{ farms: Farm[] }>("farms"),
+        clientApiGet<{ vehicles: Vehicle[] }>("transport/vehicles"),
+        clientApiGet<{ requests: TransportRequest[] }>("transport/requests"),
       ])
 
-      if (ordersRes.ok) {
-        const data = await ordersRes.json()
-        setOrders(data.orders || [])
+      if (ordersData?.orders) {
+        setOrders(ordersData.orders)
       }
-      if (farmsRes.ok) {
-        const data = await farmsRes.json()
-        setFarms(data.farms || [])
+      if (farmsData?.farms) {
+        setFarms(farmsData.farms)
       }
-      if (vehiclesRes.ok) {
-        const data = await vehiclesRes.json()
-        setVehicles(data.vehicles || [])
+      if (vehiclesData?.vehicles) {
+        setVehicles(vehiclesData.vehicles)
       }
-      if (requestsRes.ok) {
-        const data = await requestsRes.json()
-        setTransportRequests(data.requests || [])
-        if (data.requests && data.requests.length > 0) {
-          setSelectedRequest(data.requests[0])
+      if (requestsData?.requests) {
+        setTransportRequests(requestsData.requests)
+        if (requestsData.requests.length > 0) {
+          setSelectedRequest(requestsData.requests[0])
         }
       }
     } catch (err) {
@@ -73,10 +53,16 @@ export default function FarmerLogistics() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  // Orders that can request transport: status must be "confirmed" (or "pending"), 
-  // and they must not already have a transport request
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        fetchDashboardData()
+      }
+    })
+  }, [fetchDashboardData])
+
   const bookableOrders = orders.filter((o) => {
     const isConfirmed = o.status === "confirmed"
     const alreadyRequested = transportRequests.some((r) => r.order_id === o.id)
@@ -94,8 +80,6 @@ export default function FarmerLogistics() {
       const order = orders.find((o) => o.id === selectedOrderId)
       if (!order) throw new Error("Order not found")
 
-      // Lookup pickup coordinates from farm
-      // Or use product farm ID, or fallback to first farm
       const farm = farms.find((f) => f.id === order.product?.farm_id) || farms[0]
       const pickupLat = farm ? farm.gps_lat : -1.2921
       const pickupLng = farm ? farm.gps_lng : 36.8219
@@ -103,32 +87,21 @@ export default function FarmerLogistics() {
       const deliveryLat = order.delivery_lat || -1.3005
       const deliveryLng = order.delivery_lng || 36.8822
 
-      const res = await fetch("http://localhost:4000/api/transport/request", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          order_id: selectedOrderId,
-          pickup_lat: Number(pickupLat),
-          pickup_lng: Number(pickupLng),
-          delivery_lat: Number(deliveryLat),
-          delivery_lng: Number(deliveryLng),
-        }),
+      await clientApiPost("transport/request", {
+        order_id: selectedOrderId,
+        pickup_lat: Number(pickupLat),
+        pickup_lng: Number(pickupLng),
+        delivery_lat: Number(deliveryLat),
+        delivery_lng: Number(deliveryLng),
       })
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}))
-        throw new Error(errData.error || "Failed to create transport booking request")
-      }
 
       setSuccess("Transport dispatch request published to nearby transporters!")
       setSelectedOrderId("")
-      fetchDashboardData(session.access_token)
+      fetchDashboardData()
       setTimeout(() => setSuccess(""), 4000)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to create transport booking request"
+      setError(msg)
     } finally {
       setSubmitting(false)
     }
@@ -295,8 +268,8 @@ export default function FarmerLogistics() {
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-lg font-bold text-white">Active Dispatch Logs</h3>
           <button
-            onClick={() => session && fetchDashboardData(session.access_token)}
-            className="text-xs text-muted-foreground hover:text-white flex items-center space-x-1.5 transition-colors"
+            onClick={() => fetchDashboardData()}
+            className="text-xs text-muted-foreground hover:text-white flex items-center space-x-1.5 transition-colors cursor-pointer"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
             <span>Reload Logs</span>

@@ -1,34 +1,35 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
+import { api } from "@/lib/api"
+import { PriceHistory } from "@/lib/types"
 import { TrendingUp, Award, BarChart3, AlertCircle } from "lucide-react"
 
 export default function FarmerPrices() {
   const [crop, setCrop] = useState("Maize")
-  const [latestPrices, setLatestPrices] = useState<any[]>([])
+  const [latestPrices, setLatestPrices] = useState<PriceHistory[]>([])
   const [loading, setLoading] = useState(true)
 
   const crops = ["Maize", "Beans", "Rice", "Tomatoes", "Onions", "Potatoes"]
 
-  useEffect(() => {
-    fetchLatestPrices()
-  }, [])
-
-  const fetchLatestPrices = async () => {
+  const fetchLatestPrices = useCallback(async () => {
     try {
-      const res = await fetch("http://localhost:4000/api/prices/latest")
-      if (res.ok) {
-        const data = await res.json()
-        setLatestPrices(data.prices || [])
+      const data = await api.get<{ prices: PriceHistory[] }>("prices/latest")
+      if (data?.prices) {
+        setLatestPrices(data.prices)
       }
     } catch (err) {
       console.error(err)
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const filteredPrices = latestPrices.filter((p) => p.crop.toLowerCase() === crop.toLowerCase())
+  useEffect(() => {
+    fetchLatestPrices()
+  }, [fetchLatestPrices])
+
+  const filteredPrices = latestPrices.filter((p) => ((p.crop || p.product_name) ?? "").toLowerCase() === crop.toLowerCase())
 
   return (
     <div className="space-y-8">
@@ -81,7 +82,7 @@ export default function FarmerPrices() {
                     <span className="text-xs text-muted-foreground">Based on local listings</span>
                   </div>
                   <div className="text-right">
-                    <span className="text-lg font-black text-secondary">${p.avg_price}</span>
+                    <span className="text-lg font-black text-secondary">${p.avg_price || p.price}</span>
                     <span className="text-xs text-muted-foreground block">per {p.unit}</span>
                   </div>
                 </div>
@@ -103,7 +104,7 @@ export default function FarmerPrices() {
               <div>
                 <h4 className="text-xs font-bold text-white">Recommended Listing Strategy</h4>
                 <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                  Price {crop} around the average regional rate of ${filteredPrices[0]?.avg_price || 200}/ton to stay competitive.
+                  Price {crop} around the average regional rate of ${filteredPrices[0]?.avg_price || filteredPrices[0]?.price || 200}/ton to stay competitive.
                 </p>
               </div>
             </div>

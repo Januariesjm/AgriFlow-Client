@@ -1,49 +1,33 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
-import { Sprout, ShoppingBag, TrendingUp, Plus, ArrowRight, Sun, AlertTriangle, Wallet, Shield } from "lucide-react"
+import { clientApiGet } from "@/lib/api-client"
+import { Profile, Order, Product, Withdrawal } from "@/lib/types"
+import { Sprout, TrendingUp, Plus, ArrowRight, Sun, AlertTriangle, Wallet, Shield } from "lucide-react"
 
 export default function FarmerOverview() {
-  const [session, setSession] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [stats, setStats] = useState({ products: 0, orders: 0, revenue: 0, escrow: 0, available: 0 })
-  const [recentOrders, setRecentOrders] = useState<any[]>([])
+  const [recentOrders, setRecentOrders] = useState<Order[]>([])
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      if (session) {
-        fetchProfile(session.access_token)
-        fetchStatsAndOrders(session.access_token, session.user.id)
-      }
-    })
-  }, [])
-
-  const fetchProfile = async (token: string) => {
+  const fetchProfile = useCallback(async () => {
     try {
-      const res = await fetch(`http://localhost:4000/api/profile`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
+      const data = await clientApiGet<{ profile: Profile }>("profile")
+      if (data?.profile) {
         setProfile(data.profile)
       }
     } catch (err) {
       console.error(err)
     }
-  }
+  }, [])
 
-  const fetchStatsAndOrders = async (token: string, userId: string) => {
+  const fetchStatsAndOrders = useCallback(async (userId: string) => {
     try {
-      const [productsRes, ordersRes] = await Promise.all([
-        fetch("http://localhost:4000/api/products/my", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch("http://localhost:4000/api/orders", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
+      const [productsData, ordersData] = await Promise.all([
+        clientApiGet<{ products: Product[] }>("products/my"),
+        clientApiGet<{ orders: Order[] }>("orders"),
       ])
 
       let productCount = 0
@@ -52,33 +36,31 @@ export default function FarmerOverview() {
       let escrowSum = 0
       let availableSum = 0
 
-      if (productsRes.ok) {
-        const pData = await productsRes.json()
-        productCount = pData.products?.length || 0
+      if (productsData?.products) {
+        productCount = productsData.products.length
       }
 
-      if (ordersRes.ok) {
-        const oData = await ordersRes.json()
-        const orders = oData.orders || []
+      if (ordersData?.orders) {
+        const orders = ordersData.orders
         orderCount = orders.length
         setRecentOrders(orders.slice(0, 3))
 
         // Escrow balance: pending, confirmed, in_transit
         escrowSum = orders
-          .filter((o: any) => ["pending", "confirmed", "in_transit"].includes(o.status))
-          .reduce((sum: number, o: any) => sum + (o.total_price || 0), 0)
+          .filter((o) => ["pending", "confirmed", "in_transit"].includes(o.status))
+          .reduce((sum, o) => sum + (o.total_price || 0), 0)
 
         // Delivered balance (lifetime earnings)
         revenueSum = orders
-          .filter((o: any) => o.status === "delivered")
-          .reduce((sum: number, o: any) => sum + (o.total_price || 0), 0)
+          .filter((o) => o.status === "delivered")
+          .reduce((sum, o) => sum + (o.total_price || 0), 0)
 
         // Load local withdrawals to compute actual available balance
         const storedWithdrawals = localStorage.getItem(`af_withdrawals_${userId}`)
         let withdrawnAmt = 0
         if (storedWithdrawals) {
-          const parsed = JSON.parse(storedWithdrawals)
-          withdrawnAmt = parsed.reduce((total: number, item: any) => total + Number(item.amount), 0)
+          const parsed: Withdrawal[] = JSON.parse(storedWithdrawals)
+          withdrawnAmt = parsed.reduce((total, item) => total + Number(item.amount), 0)
         }
         availableSum = Math.max(0, revenueSum - withdrawnAmt)
       }
@@ -93,7 +75,16 @@ export default function FarmerOverview() {
     } catch (err) {
       console.error(err)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        fetchProfile()
+        fetchStatsAndOrders(session.user.id)
+      }
+    })
+  }, [fetchProfile, fetchStatsAndOrders])
 
   return (
     <div className="space-y-8">
@@ -130,7 +121,7 @@ export default function FarmerOverview() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 glass p-6 rounded-xl flex items-center justify-between">
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase font-bold tracking-wider">Local Agro-Weather</h3>
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Local Agro-Weather</h3>
             <div className="flex items-center space-x-3">
               <Sun className="h-8 w-8 text-amber-500 animate-pulse" />
               <span className="text-2xl font-black text-white">24°C</span>
