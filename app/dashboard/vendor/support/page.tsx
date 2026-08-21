@@ -22,9 +22,11 @@ interface FarmerQuestion {
   answer?: string
 }
 
+import { useSession } from "@/lib/hooks/useSession"
+
 export default function VendorSupport() {
-  const [session, setSession] = useState<any>(null)
-  
+  const { session } = useSession()
+
   // Support state
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [subject, setSubject] = useState("")
@@ -41,13 +43,10 @@ export default function VendorSupport() {
   const [error, setError] = useState("")
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      if (session) {
-        loadSupportData(session.user.id)
-      }
-    })
-  }, [])
+    if (session?.user) {
+      loadSupportData(session.user.id)
+    }
+  }, [session])
 
   const loadSupportData = (userId: string) => {
     // 1. Support Tickets
@@ -106,8 +105,9 @@ export default function VendorSupport() {
       setSubject("")
       setMessage("")
       setTimeout(() => setSuccess(""), 4000)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "An error occurred"
+      setError(msg)
     } finally {
       setLoading(false)
     }

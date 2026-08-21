@@ -15,8 +15,21 @@ interface Product {
   createdAt: string
 }
 
+import { useSession } from "@/lib/hooks/useSession"
+
+interface Product {
+  id: string
+  name: string
+  category: string
+  description: string
+  price: number
+  quantity: number
+  unit: string
+  createdAt: string
+}
+
 export default function VendorProducts() {
-  const [session, setSession] = useState<any>(null)
+  const { session } = useSession()
   const [products, setProducts] = useState<Product[]>([])
 
   // Form states
@@ -32,26 +45,22 @@ export default function VendorProducts() {
   const [success, setSuccess] = useState("")
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      if (session) {
-        // Load initial products from localStorage
-        const stored = localStorage.getItem(`af_vendor_products_${session.user.id}`)
-        if (stored) {
-          setProducts(JSON.parse(stored))
-        } else {
-          const defaultProducts: Product[] = [
-            { id: "p1", name: "Hybrid Maize Seeds (Pan 53)", category: "Seeds", description: "High yielding, drought tolerant hybrid maize variety.", price: 12.5, quantity: 45, unit: "2kg Pack", createdAt: new Date().toISOString() },
-            { id: "p2", name: "NPK 15:15:15 Fertilizer", category: "Fertilizers", description: "Balanced nutrient fertilizer for planting and top dressing.", price: 34.0, quantity: 8, unit: "50kg Bag", createdAt: new Date().toISOString() },
-            { id: "p3", name: "Glyphosate Weedkiller 1L", category: "Agro-Chemicals", description: "Non-selective systemic herbicide for weeds control.", price: 8.9, quantity: 15, unit: "1L Bottle", createdAt: new Date().toISOString() },
-            { id: "p4", name: "Premium Hand Hoe (Jembe)", category: "Farm Tools", description: "Forged carbon steel hoe head with durable wooden handle.", price: 6.5, quantity: 3, unit: "Piece", createdAt: new Date().toISOString() }
-          ]
-          setProducts(defaultProducts)
-          localStorage.setItem(`af_vendor_products_${session.user.id}`, JSON.stringify(defaultProducts))
-        }
+    if (session?.user) {
+      const stored = localStorage.getItem(`af_vendor_products_${session.user.id}`)
+      if (stored) {
+        setProducts(JSON.parse(stored))
+      } else {
+        const defaultProducts: Product[] = [
+          { id: "p1", name: "Hybrid Maize Seeds (Pan 53)", category: "Seeds", description: "High yielding, drought tolerant hybrid maize variety.", price: 12.5, quantity: 45, unit: "2kg Pack", createdAt: new Date().toISOString() },
+          { id: "p2", name: "NPK 15:15:15 Fertilizer", category: "Fertilizers", description: "Balanced nutrient fertilizer for planting and top dressing.", price: 34.0, quantity: 8, unit: "50kg Bag", createdAt: new Date().toISOString() },
+          { id: "p3", name: "Glyphosate Weedkiller 1L", category: "Agro-Chemicals", description: "Non-selective systemic herbicide for weeds control.", price: 8.9, quantity: 15, unit: "1L Bottle", createdAt: new Date().toISOString() },
+          { id: "p4", name: "Premium Hand Hoe (Jembe)", category: "Farm Tools", description: "Forged carbon steel hoe head with durable wooden handle.", price: 6.5, quantity: 3, unit: "Piece", createdAt: new Date().toISOString() }
+        ]
+        setProducts(defaultProducts)
+        localStorage.setItem(`af_vendor_products_${session.user.id}`, JSON.stringify(defaultProducts))
       }
-    })
-  }, [])
+    }
+  }, [session])
 
   const saveProducts = (list: Product[]) => {
     setProducts(list)
@@ -102,8 +111,9 @@ export default function VendorProducts() {
       setQuantity("")
       setSuccess("Agricultural input item listed successfully!")
       setTimeout(() => setSuccess(""), 4000)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "An error occurred"
+      setError(msg)
     } finally {
       setLoading(false)
     }

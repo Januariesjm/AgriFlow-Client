@@ -17,8 +17,10 @@ interface Order {
   notes?: string
 }
 
+import { useSession } from "@/lib/hooks/useSession"
+
 export default function VendorOrders() {
-  const [session, setSession] = useState<any>(null)
+  const { session } = useSession()
   const [orders, setOrders] = useState<Order[]>([])
   const [filter, setFilter] = useState<string>("all")
 
@@ -26,25 +28,22 @@ export default function VendorOrders() {
   const [error, setError] = useState("")
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      if (session) {
-        // Load orders
-        const stored = localStorage.getItem(`af_vendor_orders_${session.user.id}`)
-        if (stored) {
-          setOrders(JSON.parse(stored))
-        } else {
-          const defaultOrders: Order[] = [
-            { id: "o1", farmerName: "John Kamau", farmerPhone: "+254 711 222333", productName: "Hybrid Maize Seeds (Pan 53)", quantity: 5, totalPrice: 62.5, status: "pending", deliveryAddress: "Farm Block A, Nakuru Bypass", createdAt: new Date(Date.now() - 3600000).toISOString(), notes: "Please dispatch early morning." },
-            { id: "o2", farmerName: "Mary Wambui", farmerPhone: "+254 733 444555", productName: "NPK 15:15:15 Fertilizer", quantity: 2, totalPrice: 68.0, status: "confirmed", deliveryAddress: "Green Hills Cooperative, Kiambu", createdAt: new Date(Date.now() - 7200000).toISOString() },
-            { id: "o3", farmerName: "David Ochieng", farmerPhone: "+254 755 666777", productName: "Glyphosate Weedkiller 1L", quantity: 10, totalPrice: 89.0, status: "delivered", deliveryAddress: "Kisumu Central Depot", createdAt: new Date(Date.now() - 86400000).toISOString() }
-          ]
-          setOrders(defaultOrders)
-          localStorage.setItem(`af_vendor_orders_${session.user.id}`, JSON.stringify(defaultOrders))
-        }
+    if (session?.user) {
+      // Load orders
+      const stored = localStorage.getItem(`af_vendor_orders_${session.user.id}`)
+      if (stored) {
+        setOrders(JSON.parse(stored))
+      } else {
+        const defaultOrders: Order[] = [
+          { id: "o1", farmerName: "John Kamau", farmerPhone: "+254 711 222333", productName: "Hybrid Maize Seeds (Pan 53)", quantity: 5, totalPrice: 62.5, status: "pending", deliveryAddress: "Farm Block A, Nakuru Bypass", createdAt: new Date(Date.now() - 3600000).toISOString(), notes: "Please dispatch early morning." },
+          { id: "o2", farmerName: "Mary Wambui", farmerPhone: "+254 733 444555", productName: "NPK 15:15:15 Fertilizer", quantity: 2, totalPrice: 68.0, status: "confirmed", deliveryAddress: "Green Hills Cooperative, Kiambu", createdAt: new Date(Date.now() - 7200000).toISOString() },
+          { id: "o3", farmerName: "David Ochieng", farmerPhone: "+254 755 666777", productName: "Glyphosate Weedkiller 1L", quantity: 10, totalPrice: 89.0, status: "delivered", deliveryAddress: "Kisumu Central Depot", createdAt: new Date(Date.now() - 86400000).toISOString() }
+        ]
+        setOrders(defaultOrders)
+        localStorage.setItem(`af_vendor_orders_${session.user.id}`, JSON.stringify(defaultOrders))
       }
-    })
-  }, [])
+    }
+  }, [session])
 
   const saveOrders = (list: Order[]) => {
     setOrders(list)

@@ -17,14 +17,16 @@ interface Order {
   totalPrice: number
 }
 
+import { useSession } from "@/lib/hooks/useSession"
+
 export default function VendorWallet() {
-  const [session, setSession] = useState<any>(null)
-  
+  const { session } = useSession()
+
   // Wallet states
   const [balance, setBalance] = useState(250.0)
   const [lifetime, setLifetime] = useState(1540.0)
   const [ledgers, setLedgers] = useState<LedgerItem[]>([])
-  
+
   // Dynamic calculation for escrows
   const [escrowBalance, setEscrowBalance] = useState(0)
 
@@ -37,13 +39,10 @@ export default function VendorWallet() {
   const [error, setError] = useState("")
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      if (session) {
-        loadWalletData(session.user.id)
-      }
-    })
-  }, [])
+    if (session?.user) {
+      loadWalletData(session.user.id)
+    }
+  }, [session])
 
   const loadWalletData = (userId: string) => {
     // 1. Load basic wallet
@@ -133,8 +132,9 @@ export default function VendorWallet() {
         setWithdrawAmount("")
         setRecipient("")
         setTimeout(() => setSuccess(""), 4000)
-      } catch (err: any) {
-        setError(err.message)
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "An error occurred"
+        setError(msg)
       } finally {
         setWithdrawing(false)
       }

@@ -6,9 +6,11 @@ import { Compass, CheckCircle2, Save, ShoppingBag, Globe, Phone, MapPin } from "
 import PlaceAutocomplete from "@/components/maps/PlaceAutocomplete"
 import GoogleMap from "@/components/maps/GoogleMap"
 
+import { useSession } from "@/lib/hooks/useSession"
+
 export default function VendorStorefront() {
-  const [session, setSession] = useState<any>(null)
-  
+  const { session } = useSession()
+
   // Storefront fields
   const [storeName, setStoreName] = useState("")
   const [description, setDescription] = useState("")
@@ -24,31 +26,28 @@ export default function VendorStorefront() {
   const [error, setError] = useState("")
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      if (session) {
-        // Load stored storefront
-        const stored = localStorage.getItem(`af_vendor_store_${session.user.id}`)
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          setStoreName(parsed.name || "")
-          setDescription(parsed.description || "")
-          setAddress(parsed.address || "")
-          setPhone(parsed.phone || "")
-          setGpsLat(parsed.gpsLat || "-1.2921")
-          setGpsLng(parsed.gpsLng || "36.8219")
-          setStoreStatus(parsed.status || "open")
-          setDeliveryRate(parsed.deliveryRate || "1.5")
-        } else {
-          // Defaults
-          setStoreName("East Africa Agri-Inputs Ltd")
-          setDescription("Your premium destination for hybrid seeds, fertilizers, and modern tractor tools.")
-          setAddress("Industrial Area Road, Block G, Nairobi")
-          setPhone("+254 722 000111")
-        }
+    if (session?.user) {
+      // Load stored storefront
+      const stored = localStorage.getItem(`af_vendor_store_${session.user.id}`)
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        setStoreName(parsed.name || "")
+        setDescription(parsed.description || "")
+        setAddress(parsed.address || "")
+        setPhone(parsed.phone || "")
+        setGpsLat(parsed.gpsLat || "-1.2921")
+        setGpsLng(parsed.gpsLng || "36.8219")
+        setStoreStatus(parsed.status || "open")
+        setDeliveryRate(parsed.deliveryRate || "1.5")
+      } else {
+        // Defaults
+        setStoreName("East Africa Agri-Inputs Ltd")
+        setDescription("Your premium destination for hybrid seeds, fertilizers, and modern tractor tools.")
+        setAddress("Industrial Area Road, Block G, Nairobi")
+        setPhone("+254 722 000111")
       }
-    })
-  }, [])
+    }
+  }, [session])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -89,8 +88,9 @@ export default function VendorStorefront() {
 
       setSuccess("Storefront profile saved successfully!")
       setTimeout(() => setSuccess(""), 4000)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "An error occurred"
+      setError(msg)
     } finally {
       setLoading(false)
     }
