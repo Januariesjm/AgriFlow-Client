@@ -34,14 +34,18 @@ Thank you for your interest in contributing to **AgriFlow Client**! We welcome c
   npm test
   ```
 
-### 3. Commit Convention
+### 3. Commit Convention & Atomic Changes
 Use [Conventional Commits](https://www.conventionalcommits.org/) for commit messages:
-- `feat:` New feature
-- `fix:` Bug fix
-- `test:` Adding or updating tests
+- `feat:` New feature paired with unit/integration tests
+- `fix:` Bug fix paired with regression test
+- `test:` Adding or updating test suites
 - `refactor:` Code change that neither fixes a bug nor adds a feature
 - `docs:` Documentation updates
 - `ci:` CI/CD workflow updates
+
+#### Atomic Commit Guidelines:
+- Keep each feature or fix in its own small commit including the tests pinning the new behavior.
+- Avoid large bulk commits that mix formatting, refactoring, and features together.
 
 ---
 
