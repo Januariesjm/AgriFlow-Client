@@ -15,31 +15,30 @@ interface Delivery {
   status: "dispatched" | "en_route" | "arrived" | "offloaded"
 }
 
+import { useSession } from "@/lib/hooks/useSession"
+
 export default function WarehouseLogistics() {
-  const [session, setSession] = useState<any>(null)
+  const { session } = useSession()
   const [deliveries, setDeliveries] = useState<Delivery[]>([])
   const [success, setSuccess] = useState("")
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      if (session) {
-        // Load initial inbound logistics manifests from localStorage
-        const stored = localStorage.getItem(`af_warehouse_logistics_${session.user.id}`)
-        if (stored) {
-          setDeliveries(JSON.parse(stored))
-        } else {
-          const defaultDeliveries: Delivery[] = [
-            { id: "del-1", driverName: "Ezekiel Mwangi", vehiclePlate: "KCD 456Y (Actros)", facilityName: "Rift Valley Cold Hub", cargo: "Seed Potatoes", weight: 24, eta: "Today, 14:30 PM", status: "en_route" },
-            { id: "del-2", driverName: "Hassan Omar", vehiclePlate: "KBZ 789M (Fuso)", facilityName: "Nakuru Dry Silos", cargo: "White Maize", weight: 15, eta: "Tomorrow, 09:00 AM", status: "dispatched" },
-            { id: "del-3", driverName: "Peter Kamau", vehiclePlate: "KDF 123A (Scania)", facilityName: "Rift Valley Cold Hub", cargo: "Fresh Onions", weight: 30, eta: "Arrived at 11:15 AM", status: "arrived" }
-          ]
-          setDeliveries(defaultDeliveries)
-          localStorage.setItem(`af_warehouse_logistics_${session.user.id}`, JSON.stringify(defaultDeliveries))
-        }
+    if (session?.user) {
+      // Load initial inbound logistics manifests from localStorage
+      const stored = localStorage.getItem(`af_warehouse_logistics_${session.user.id}`)
+      if (stored) {
+        setDeliveries(JSON.parse(stored))
+      } else {
+        const defaultDeliveries: Delivery[] = [
+          { id: "del-1", driverName: "Ezekiel Mwangi", vehiclePlate: "KCD 456Y (Actros)", facilityName: "Rift Valley Cold Hub", cargo: "Seed Potatoes", weight: 24, eta: "Today, 14:30 PM", status: "en_route" },
+          { id: "del-2", driverName: "Hassan Omar", vehiclePlate: "KBZ 789M (Fuso)", facilityName: "Nakuru Dry Silos", cargo: "White Maize", weight: 15, eta: "Tomorrow, 09:00 AM", status: "dispatched" },
+          { id: "del-3", driverName: "Peter Kamau", vehiclePlate: "KDF 123A (Scania)", facilityName: "Rift Valley Cold Hub", cargo: "Fresh Onions", weight: 30, eta: "Arrived at 11:15 AM", status: "arrived" }
+        ]
+        setDeliveries(defaultDeliveries)
+        localStorage.setItem(`af_warehouse_logistics_${session.user.id}`, JSON.stringify(defaultDeliveries))
       }
-    })
-  }, [])
+    }
+  }, [session])
 
   const saveDeliveries = (list: Delivery[]) => {
     setDeliveries(list)

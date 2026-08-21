@@ -26,8 +26,10 @@ interface Facility {
   occupied: number
 }
 
+import { useSession } from "@/lib/hooks/useSession"
+
 export default function WarehouseBookings() {
-  const [session, setSession] = useState<any>(null)
+  const { session } = useSession()
   const [bookings, setBookings] = useState<Booking[]>([])
   const [facilities, setFacilities] = useState<Facility[]>([])
   const [filter, setFilter] = useState<string>("all")
@@ -36,13 +38,10 @@ export default function WarehouseBookings() {
   const [error, setError] = useState("")
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      if (session) {
-        loadData(session.user.id)
-      }
-    })
-  }, [])
+    if (session?.user) {
+      loadData(session.user.id)
+    }
+  }, [session])
 
   const loadData = (userId: string) => {
     // 1. Load Facilities
