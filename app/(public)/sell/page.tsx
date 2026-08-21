@@ -7,6 +7,7 @@ import Header from "@/components/layout/header"
 import Footer from "@/components/layout/footer"
 import { supabase } from "@/lib/supabase"
 import { clientApiGet } from "@/lib/api-client"
+import { calculateSellEarnings } from "@/lib/calculations/checkout"
 import { Profile } from "@/lib/types"
 import { Session } from "@supabase/supabase-js"
 import { 
@@ -67,10 +68,11 @@ export default function SellPage() {
     })
   }, [fetchProfile])
 
-  const grossEarnings = selectedCrop.pricePerTon * quantity
-  const platformFee = grossEarnings * 0.02
-  const transportCostEstimate = quantity * transportDistance * 0.15
-  const netEarnings = Math.max(0, grossEarnings - platformFee - transportCostEstimate)
+  const { grossEarnings, platformFee, transportCostEstimate, netEarnings } = calculateSellEarnings(
+    selectedCrop.pricePerTon,
+    quantity,
+    transportDistance
+  )
 
   const handleFulfill = (id: number) => {
     setFulfilledId(id)
