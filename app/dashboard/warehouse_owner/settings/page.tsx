@@ -1,5 +1,6 @@
 "use client"
 import { logger } from "@/lib/logger"
+import { ProfileSchema } from "@/lib/schemas"
 
 import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
@@ -38,11 +39,21 @@ export default function WarehouseSettings() {
     try {
       const data = await clientApiGet<{ profile: Profile }>("profile")
       if (data?.profile) {
-        setProfile(data.profile)
-        setFullName(data.profile.full_name || "")
-        setPhone(data.profile.phone || "")
-        setCountry(data.profile.country || "")
-        setRegion(data.profile.region || "")
+        const parsed = ProfileSchema.safeParse(data.profile)
+        if (parsed.success) {
+          setProfile(parsed.data as Profile)
+          setFullName(parsed.data.full_name || "")
+          setPhone(parsed.data.phone || "")
+          setCountry(parsed.data.country || "")
+          setRegion(parsed.data.region || "")
+        } else {
+          logger.warn("WarehouseSettings", "Invalid profile schema payload from API", parsed.error)
+          setProfile(data.profile)
+          setFullName(data.profile.full_name || "")
+          setPhone(data.profile.phone || "")
+          setCountry(data.profile.country || "")
+          setRegion(data.profile.region || "")
+        }
       }
     } catch (err) {
       logger.error("DashboardWarehouseOwnerSettings", "Operation failed", err)

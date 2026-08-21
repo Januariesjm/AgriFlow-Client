@@ -11,7 +11,8 @@ interface Identifiable {
 export function useResourceWithFallback<T extends Identifiable>(
   apiEndpoint: string,
   storageKeyPrefix: string,
-  initialFallbackItems: T[] = []
+  initialFallbackItems: T[] = [],
+  validator?: (item: unknown) => boolean
 ) {
   const { session } = useSession()
   const [items, setItems] = useState<T[]>(initialFallbackItems)
@@ -35,14 +36,25 @@ export function useResourceWithFallback<T extends Identifiable>(
         initialFallbackItems,
         `useResourceWithFallback[${apiEndpoint}]`
       )
-      setItems(data || [])
+      if (data && validator) {
+        const validItems = data.filter((item) => {
+          const isValid = validator(item)
+          if (!isValid) {
+            logger.warn("useResourceWithFallback", `Resource payload failed Zod schema validation for ${apiEndpoint}`, item)
+          }
+          return isValid
+        })
+        setItems(validItems)
+      } else {
+        setItems(data || [])
+      }
     } catch (err: unknown) {
       logger.error("useResourceWithFallback", `Failed loading resources for ${apiEndpoint}`, err)
       setError("Unable to sync resources. Using offline cache.")
     } finally {
       setLoading(false)
     }
-  }, [apiEndpoint, getStorageKey, initialFallbackItems])
+  }, [apiEndpoint, getStorageKey, initialFallbackItems, validator])
 
   useEffect(() => {
     if (session !== undefined) {

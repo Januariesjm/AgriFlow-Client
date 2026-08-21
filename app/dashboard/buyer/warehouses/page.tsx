@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useResourceWithFallback } from "@/lib/hooks/useResourceWithFallback"
 import { logger } from "@/lib/logger"
 import { Warehouse } from "@/lib/types"
+import { WarehouseSchema } from "@/lib/schemas"
 import { Compass, CheckCircle, Plus, Trash2, Home, BarChart } from "lucide-react"
 
 const DEFAULT_WAREHOUSES: Warehouse[] = [
@@ -29,7 +30,12 @@ export default function MyWarehouses() {
     success,
     addResource,
     deleteResource,
-  } = useResourceWithFallback<Warehouse>("buyer/warehouses", "af_buyer_warehouses", DEFAULT_WAREHOUSES)
+  } = useResourceWithFallback<Warehouse>(
+    "buyer/warehouses",
+    "af_buyer_warehouses",
+    DEFAULT_WAREHOUSES,
+    (item) => WarehouseSchema.safeParse(item).success
+  )
 
   // Form fields
   const [name, setName] = useState("")

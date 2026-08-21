@@ -149,3 +149,16 @@ export const ProductSchema = z.object({
 
 export type ProductSchemaType = z.infer<typeof ProductSchema>
 
+export const OrderResponseSchema = z.object({
+  id: z.string(),
+  product_id: z.string(),
+  buyer_id: z.string(),
+  quantity: z.number(),
+  total_price: z.number(),
+  status: z.enum(["pending", "paid", "shipped", "delivered", "cancelled"]),
+  created_at: z.string(),
+})
+
+export type OrderResponse = z.infer<typeof OrderResponseSchema>
+
+

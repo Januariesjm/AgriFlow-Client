@@ -7,9 +7,36 @@ import {
   AdminStatsSchema,
   TransportCostEstimateSchema,
   CreateOrderInputSchema,
+  OrderResponseSchema,
 } from "@/lib/schemas"
 
 describe("Zod Schemas", () => {
+  describe("OrderResponseSchema", () => {
+    const validOrder = {
+      id: "ord-101",
+      product_id: "prod-1",
+      buyer_id: "buyer-2",
+      quantity: 50,
+      total_price: 11000,
+      status: "paid" as const,
+      created_at: "2026-08-01T10:00:00Z",
+    }
+
+    test("accepts a valid order payload", () => {
+      const result = OrderResponseSchema.safeParse(validOrder)
+      expect(result.success).toBe(true)
+    })
+
+    test("rejects an order payload with invalid status", () => {
+      const result = OrderResponseSchema.safeParse({ ...validOrder, status: "shipped_out" })
+      expect(result.success).toBe(false)
+    })
+
+    test("rejects an order payload with non-numeric total_price", () => {
+      const result = OrderResponseSchema.safeParse({ ...validOrder, total_price: "11000" })
+      expect(result.success).toBe(false)
+    })
+  })
   describe("ProfileSchema", () => {
     const validProfile = {
       id: "user-123",
