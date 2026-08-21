@@ -13,14 +13,19 @@ const config = {
     "^@/(.*)$": "<rootDir>/$1",
   },
   testPathIgnorePatterns: ["<rootDir>/.next/", "<rootDir>/node_modules/", "<rootDir>/__tests__/__mocks__/"],
-  coverageThreshold: {
-    global: {
-      branches: 60,
-      functions: 60,
-      lines: 60,
-      statements: 60,
-    },
-  },
 }
 
-module.exports = createJestConfig(config)
+module.exports = async () => {
+  const jestConfig = await createJestConfig(config)()
+  return {
+    ...jestConfig,
+    coverageThreshold: {
+      global: {
+        branches: 60,
+        functions: 60,
+        lines: 60,
+        statements: 60,
+      },
+    },
+  }
+}
