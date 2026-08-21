@@ -11,6 +11,7 @@ export interface Profile {
   gps_lng?: number
   is_verified: boolean
   created_at: string
+  updated_at?: string
 }
 
 export interface Farm {
@@ -77,16 +78,19 @@ export interface Order {
     category: string
     images?: string[]
     unit: string
+    farm_id?: string
   }
   buyer?: {
     full_name: string
     email: string
     phone?: string
+    country?: string
   }
   farmer?: {
     full_name: string
     email: string
     phone?: string
+    country?: string
   }
 }
 
@@ -120,6 +124,7 @@ export interface TransportRequest {
   delivery_lng: number
   distance_km?: number
   estimated_cost?: number
+  payload_weight?: number
   status: "pending" | "accepted" | "in_transit" | "completed" | "cancelled"
   created_at: string
   vehicle?: Vehicle
@@ -128,11 +133,64 @@ export interface TransportRequest {
 export interface PriceHistory {
   id: string
   product_name: string
+  crop?: string
   category: string
   country: string
   region?: string
   price: number
+  avg_price?: number
+  min_price?: number
+  max_price?: number
   unit: string
   currency: string
   recorded_at: string
+}
+
+export interface ComparisonItem {
+  farmer_id?: string
+  farmer_name?: string
+  country?: string
+  distance_km?: number
+  base_price?: number
+  avg_price?: number
+  transport_cost?: number
+  transport_estimate?: number
+  total_landed_cost?: number
+  delivered_cost?: number
+  quality_grade?: string
+}
+
+export interface Withdrawal {
+  id: string
+  amount: number
+  method: string
+  destination: string
+  status: "pending" | "completed" | "failed"
+  created_at: string
+}
+
+export interface Deposit {
+  id: string
+  amount: number
+  method: string
+  reference: string
+  status: "pending" | "completed" | "failed"
+  created_at: string
+}
+
+export interface PayoutConfig {
+  payoutMethod: "mobile_money" | "bank"
+  mobileProvider: string
+  mobilePhone: string
+  bankName: string
+  accountName: string
+  accountNumber: string
+}
+
+export interface NotificationPrefs {
+  emailNotifs: boolean
+  orderNotifs: boolean
+  priceAlerts: boolean
+  weatherAlerts?: boolean
+  maxSourcingRange?: string
 }
