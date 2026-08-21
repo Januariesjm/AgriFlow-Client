@@ -39,6 +39,8 @@ export default function ProductDetail() {
       setSession(session)
     })
     fetchProduct()
+  }, [id])
+
   const fetchProduct = async () => {
     try {
       const data = await api.get<{ product?: Product }>(`products/${id}`)

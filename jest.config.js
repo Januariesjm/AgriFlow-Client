@@ -12,11 +12,11 @@ const config = {
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/$1",
   },
-  testPathIgnorePatterns: ["<rootDir>/.next/", "<rootDir>/node_modules/"],
+  testPathIgnorePatterns: ["<rootDir>/.next/", "<rootDir>/node_modules/", "<rootDir>/__tests__/__mocks__/"],
   coverageThreshold: {
     global: {
       branches: 60,
-      functions: 45,
+      functions: 60,
       lines: 60,
       statements: 60,
     },
