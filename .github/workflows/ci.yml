@@ -78,6 +78,9 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      # Coverage is gated by the coverageThreshold block in jest.config.js:
+      # the run exits non-zero if global branches/functions/lines/statements
+      # coverage drops below 60%, failing this job and blocking the build job.
       - name: Run Jest Tests with Coverage
         run: npm test -- --coverage --ci
 
@@ -100,3 +103,17 @@ jobs:
 
       - name: Build Next.js Web App
         run: npm run build
+
+  docker:
+    name: Container Build Verification
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Deploy-readiness gate: proves the production container image builds
+      # from a clean checkout using the same standalone output the runtime
+      # stage serves.
+      - name: Build Production Container Image
+        run: docker build -t agriflow-client:ci .

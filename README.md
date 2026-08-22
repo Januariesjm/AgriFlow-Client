@@ -97,12 +97,12 @@ Runs ESLint to verify code quality and style compliance.
 
 This repository includes a GitHub Actions workflow located at `.github/workflows/ci.yml`. On every push and pull request to `main`, `master`, or `develop`, the pipeline executes:
 
-1. **Environment Verification:** Check `.env.example` existence
-2. **Dependency Installation:** `npm ci`
-3. **Security Audit:** `npm audit --audit-level=high`
-4. **Type Check:** `npx tsc --noEmit`
-5. **Lint Check:** `npm run lint`
-6. **Test Suite & Coverage:** `npm test`
+1. **Lint Check:** `npm run lint`
+2. **Security Audit:** `npm audit --audit-level=high`
+3. **Type Check:** `npx tsc --noEmit`
+4. **Test Suite & Coverage:** `npm test -- --coverage --ci` (fails below the 60% global coverage threshold)
+5. **Production Build:** `npm run build` (gated on all previous jobs)
+6. **Container Build Verification:** `docker build` of the production image (gated on the build job)
 
 ---
 
