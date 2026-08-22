@@ -25,6 +25,13 @@ export function useResourceWithFallback<T extends Identifiable>(
     validatorRef.current = validator
   }, [validator])
 
+  // Held in a ref so callers can pass inline array literals without
+  // destabilizing loadResources and triggering a refetch loop every render.
+  const fallbackRef = useRef(initialFallbackItems)
+  useEffect(() => {
+    fallbackRef.current = initialFallbackItems
+  }, [initialFallbackItems])
+
   const getStorageKey = useCallback(() => {
     const userId = session?.user?.id || "guest"
     return `${storageKeyPrefix}_${userId}`
@@ -38,7 +45,7 @@ export function useResourceWithFallback<T extends Identifiable>(
       const data = await loadWithFallback<T[]>(
         key,
         () => clientApiGet<T[]>(apiEndpoint),
-        initialFallbackItems,
+        fallbackRef.current,
         undefined,
         `useResourceWithFallback[${apiEndpoint}]`
       )
@@ -61,7 +68,7 @@ export function useResourceWithFallback<T extends Identifiable>(
     } finally {
       setLoading(false)
     }
-  }, [apiEndpoint, getStorageKey, initialFallbackItems])
+  }, [apiEndpoint, getStorageKey])
 
   useEffect(() => {
     if (session !== undefined) {
