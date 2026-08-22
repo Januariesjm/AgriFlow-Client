@@ -1,0 +1,17 @@
+# Dependencies and build output are produced inside the image
+node_modules
+.next
+.swc
+coverage
+tsconfig.tsbuildinfo
+
+# VCS, CI, and local tooling
+.git
+.github
+
+# Never bake local environment files into an image
+.env*
+
+# Not needed at build or runtime
+__tests__
+npm-debug.log*
