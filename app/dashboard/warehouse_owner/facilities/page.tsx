@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useResourceWithFallback } from "@/lib/hooks/useResourceWithFallback"
 import { logger } from "@/lib/logger"
+import { FacilityFormSchema, formatZodIssues } from "@/lib/schemas"
 import { Facility } from "@/lib/types"
 import { Compass, Plus, Trash2, Globe, MapPin, Shield } from "lucide-react"
 import PlaceAutocomplete from "@/components/maps/PlaceAutocomplete"
@@ -41,37 +42,32 @@ export default function WarehouseFacilities() {
     e.preventDefault()
 
     try {
-      if (!name.trim() || !address.trim()) {
-        throw new Error("Facility name and address are required.")
-      }
-
-      const capVal = Number(capacity)
-      if (isNaN(capVal) || capVal <= 0) {
-        throw new Error("Please specify a valid numeric capacity (tons).")
-      }
-
-      const rateVal = Number(dailyRate)
-      if (isNaN(rateVal) || rateVal <= 0) {
-        throw new Error("Please specify a valid numeric daily rental rate.")
-      }
-
-      const latVal = Number(gpsLat)
-      const lngVal = Number(gpsLng)
-      if (isNaN(latVal) || isNaN(lngVal)) {
-        throw new Error("Please provide valid numeric GPS coordinates.")
+      const parsed = FacilityFormSchema.safeParse({
+        name,
+        type,
+        capacity,
+        dailyRate,
+        address,
+        gpsLat,
+        gpsLng,
+        status,
+      })
+      if (!parsed.success) {
+        setError(formatZodIssues(parsed.error))
+        return
       }
 
       await addResource(
         {
-          name,
-          type,
-          capacity: capVal,
+          name: parsed.data.name,
+          type: parsed.data.type,
+          capacity: parsed.data.capacity,
           occupied: 0,
-          dailyRate: rateVal,
-          address,
-          gpsLat,
-          gpsLng,
-          status,
+          dailyRate: parsed.data.dailyRate,
+          address: parsed.data.address,
+          gpsLat: String(parsed.data.gpsLat),
+          gpsLng: String(parsed.data.gpsLng),
+          status: parsed.data.status,
         },
         "fac"
       )

@@ -40,15 +40,31 @@ describe("Warehouse & Facilities Pages", () => {
     })
   })
 
-  test("validates form inputs on Facility registration submit", async () => {
+  test("surfaces schema validation issues on empty Facility registration submit", async () => {
     const { container } = render(<WarehouseFacilities />)
 
     const form = container.querySelector("form")!
     fireEvent.submit(form)
 
-    // Requires facility name and address
+    // Zod schema reports missing name, address, and non-positive numeric fields
     await waitFor(() => {
-      expect(screen.getByText("Facility name and address are required.")).toBeInTheDocument()
+      expect(screen.getByText(/Facility name is required\./)).toBeInTheDocument()
+      expect(screen.getByText(/Facility address is required\./)).toBeInTheDocument()
+    })
+  })
+
+  test("rejects non-positive capacity via schema validation", async () => {
+    const { container } = render(<WarehouseFacilities />)
+
+    fireEvent.change(screen.getByPlaceholderText("e.g. Eldoret Grain Terminal"), { target: { value: "Molo Depot" } })
+    fireEvent.change(screen.getByTestId("place-autocomplete"), { target: { value: "Molo Town" } })
+    fireEvent.change(screen.getByPlaceholderText("500"), { target: { value: "-5" } })
+    fireEvent.change(screen.getByPlaceholderText("0.50"), { target: { value: "0.4" } })
+
+    fireEvent.submit(container.querySelector("form")!)
+
+    await waitFor(() => {
+      expect(screen.getByText(/Capacity must be a positive number of tons\./)).toBeInTheDocument()
     })
   })
 
