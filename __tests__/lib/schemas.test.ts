@@ -8,6 +8,10 @@ import {
   TransportCostEstimateSchema,
   CreateOrderInputSchema,
   OrderResponseSchema,
+  FacilityFormSchema,
+  ProductFormSchema,
+  WarehouseFormSchema,
+  formatZodIssues,
 } from "@/lib/schemas"
 
 describe("Zod Schemas", () => {
@@ -190,6 +194,148 @@ describe("Zod Schemas", () => {
     test("applies defaults for missing nested fields", () => {
       const result = AdminStatsSchema.safeParse({})
       expect(result.success).toBe(true)
+    })
+  })
+
+  describe("FacilityFormSchema", () => {
+    const validForm = {
+      name: "Eldoret Grain Terminal",
+      type: "Grain Silo",
+      capacity: "500",
+      dailyRate: "0.50",
+      address: "Silo Road, Eldoret",
+      gpsLat: "-0.5143",
+      gpsLng: "35.2698",
+      status: "active",
+    }
+
+    test("accepts valid raw form input and coerces numeric strings", () => {
+      const result = FacilityFormSchema.safeParse(validForm)
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.capacity).toBe(500)
+        expect(result.data.dailyRate).toBe(0.5)
+        expect(result.data.gpsLat).toBeCloseTo(-0.5143)
+      }
+    })
+
+    test("rejects empty facility name", () => {
+      const result = FacilityFormSchema.safeParse({ ...validForm, name: "  " })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(formatZodIssues(result.error)).toContain("Facility name is required.")
+      }
+    })
+
+    test("rejects non-numeric capacity", () => {
+      const result = FacilityFormSchema.safeParse({ ...validForm, capacity: "lots" })
+      expect(result.success).toBe(false)
+    })
+
+    test("rejects zero or negative daily rate", () => {
+      expect(FacilityFormSchema.safeParse({ ...validForm, dailyRate: "0" }).success).toBe(false)
+      expect(FacilityFormSchema.safeParse({ ...validForm, dailyRate: "-2" }).success).toBe(false)
+    })
+
+    test("rejects out-of-range GPS coordinates", () => {
+      expect(FacilityFormSchema.safeParse({ ...validForm, gpsLat: "120" }).success).toBe(false)
+      expect(FacilityFormSchema.safeParse({ ...validForm, gpsLng: "-181" }).success).toBe(false)
+    })
+  })
+
+  describe("ProductFormSchema", () => {
+    const validForm = {
+      name: "Maize",
+      category: "Grains",
+      description: "Dried grade-A maize",
+      quantity: "10",
+      unit: "ton",
+      price: "220",
+      gpsLat: "-1.2921",
+      gpsLng: "36.8219",
+      harvestDate: "2026-09-01",
+      qualityGrade: "A",
+      farmId: "farm-1",
+    }
+
+    test("accepts valid raw form input and coerces numeric strings", () => {
+      const result = ProductFormSchema.safeParse(validForm)
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.quantity).toBe(10)
+        expect(result.data.price).toBe(220)
+      }
+    })
+
+    test("rejects empty quantity (coerced to zero)", () => {
+      const result = ProductFormSchema.safeParse({ ...validForm, quantity: "" })
+      expect(result.success).toBe(false)
+    })
+
+    test("rejects non-numeric price", () => {
+      const result = ProductFormSchema.safeParse({ ...validForm, price: "expensive" })
+      expect(result.success).toBe(false)
+    })
+
+    test("rejects unknown quality grade", () => {
+      const result = ProductFormSchema.safeParse({ ...validForm, qualityGrade: "S" })
+      expect(result.success).toBe(false)
+    })
+
+    test("allows optional description, harvest date, and farm id to be omitted", () => {
+      const { description: _d, harvestDate: _h, farmId: _f, ...rest } = validForm
+      const result = ProductFormSchema.safeParse(rest)
+      expect(result.success).toBe(true)
+    })
+  })
+
+  describe("WarehouseFormSchema", () => {
+    const validForm = {
+      name: "Nairobi Central Depot",
+      location: "Nairobi Industrial Area",
+      capacity: "500",
+      storageType: "Cold Storage",
+      gpsLat: "-1.3005",
+      gpsLng: "36.8822",
+      status: "active",
+    }
+
+    test("accepts valid raw form input", () => {
+      expect(WarehouseFormSchema.safeParse(validForm).success).toBe(true)
+    })
+
+    test("rejects empty location", () => {
+      const result = WarehouseFormSchema.safeParse({ ...validForm, location: "" })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(formatZodIssues(result.error)).toContain("Warehouse location is required.")
+      }
+    })
+
+    test("rejects invalid status", () => {
+      expect(WarehouseFormSchema.safeParse({ ...validForm, status: "closed" }).success).toBe(false)
+    })
+  })
+
+  describe("formatZodIssues", () => {
+    test("joins all issue messages into one string", () => {
+      const result = FacilityFormSchema.safeParse({
+        name: "",
+        type: "Cold Storage",
+        capacity: "0",
+        dailyRate: "0.5",
+        address: "",
+        gpsLat: "0",
+        gpsLng: "0",
+        status: "active",
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        const message = formatZodIssues(result.error)
+        expect(message).toContain("Facility name is required.")
+        expect(message).toContain("Capacity must be a positive number of tons.")
+        expect(message).toContain("Facility address is required.")
+      }
     })
   })
 })

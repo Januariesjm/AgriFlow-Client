@@ -161,4 +161,74 @@ export const OrderResponseSchema = z.object({
 
 export type OrderResponse = z.infer<typeof OrderResponseSchema>
 
+// --- Form boundary schemas ---
+// Validate raw controlled-input values (strings) before a payload leaves the
+// client, so every form submits through the same rules as the API layer.
+
+const gpsLatField = z.coerce
+  .number({ invalid_type_error: "GPS latitude must be numeric." })
+  .min(-90, "GPS latitude must be between -90 and 90.")
+  .max(90, "GPS latitude must be between -90 and 90.")
+
+const gpsLngField = z.coerce
+  .number({ invalid_type_error: "GPS longitude must be numeric." })
+  .min(-180, "GPS longitude must be between -180 and 180.")
+  .max(180, "GPS longitude must be between -180 and 180.")
+
+export const FacilityFormSchema = z.object({
+  name: z.string().trim().min(1, "Facility name is required."),
+  type: z.string().trim().min(1, "Storage type is required."),
+  capacity: z.coerce
+    .number({ invalid_type_error: "Capacity must be a number." })
+    .positive("Capacity must be a positive number of tons."),
+  dailyRate: z.coerce
+    .number({ invalid_type_error: "Daily rate must be a number." })
+    .positive("Daily rate must be a positive amount."),
+  address: z.string().trim().min(1, "Facility address is required."),
+  gpsLat: gpsLatField,
+  gpsLng: gpsLngField,
+  status: z.enum(["active", "full", "maintenance"]),
+})
+
+export type FacilityFormInput = z.infer<typeof FacilityFormSchema>
+
+export const ProductFormSchema = z.object({
+  name: z.string().trim().min(1, "Crop name is required."),
+  category: z.string().trim().min(1, "Category is required."),
+  description: z.string().trim().optional(),
+  quantity: z.coerce
+    .number({ invalid_type_error: "Quantity must be a number." })
+    .positive("Quantity must be a positive number."),
+  unit: z.string().trim().min(1, "Listing unit is required."),
+  price: z.coerce
+    .number({ invalid_type_error: "Price must be a number." })
+    .positive("Price must be a positive amount."),
+  gpsLat: gpsLatField,
+  gpsLng: gpsLngField,
+  harvestDate: z.string().optional(),
+  qualityGrade: z.enum(["A", "B", "C", "Ungraded"]),
+  farmId: z.string().optional(),
+})
+
+export type ProductFormInput = z.infer<typeof ProductFormSchema>
+
+export const WarehouseFormSchema = z.object({
+  name: z.string().trim().min(1, "Warehouse name is required."),
+  location: z.string().trim().min(1, "Warehouse location is required."),
+  capacity: z.coerce
+    .number({ invalid_type_error: "Capacity must be a number." })
+    .positive("Please enter a valid capacity in tons."),
+  storageType: z.string().trim().min(1, "Storage type is required."),
+  gpsLat: gpsLatField,
+  gpsLng: gpsLngField,
+  status: z.enum(["active", "inactive"]),
+})
+
+export type WarehouseFormInput = z.infer<typeof WarehouseFormSchema>
+
+/** Flattens a ZodError into a single user-facing message string. */
+export function formatZodIssues(error: z.ZodError): string {
+  return error.issues.map((issue) => issue.message).join(" ")
+}
+
 
