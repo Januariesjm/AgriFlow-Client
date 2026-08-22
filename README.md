@@ -8,8 +8,9 @@ AgriFlow Client is a modern Next.js 16 agricultural supply chain platform connec
 
 - **Framework:** Next.js 16 (App Router) with standalone production build
 - **State & Data Fetching:** Centralized API client layer (`lib/api.ts`, `lib/api-client.ts`) with custom React hooks
+- **Resource Pattern:** Dashboard pages consume shared hooks (`lib/hooks/useResourceWithFallback.ts` for CRUD resources with offline localStorage fallback, plus feature hooks like `useFarmerLogistics`) so fetch, persistence, and mutation logic stay out of page components
 - **Authentication:** Supabase Auth with JWT bearer token verification
-- **Validation & Schemas:** Zod schema validation (`lib/schemas.ts`)
+- **Validation & Schemas:** Zod schema validation (`lib/schemas.ts`) — API payload schemas plus form boundary schemas (`*FormSchema`) that every dashboard form submits through
 - **Styling:** Tailwind CSS & Lucide Icons
 - **Testing:** Jest, React Testing Library, and jsdom
 - **Containerization:** Docker & Docker Compose
