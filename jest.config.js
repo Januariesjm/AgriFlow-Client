@@ -49,6 +49,7 @@ const customJestConfig = {
     "lib/supabase.ts",
     "lib/calculations/**/*.{js,jsx,ts,tsx}",
     "lib/data/**/*.{js,jsx,ts,tsx}",
+    "lib/hooks/useFarmerLogistics.ts",
     "lib/hooks/useProductDetail.ts",
     "lib/hooks/useProfileSettings.ts",
     "lib/hooks/useResourceWithFallback.ts",
