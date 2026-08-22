@@ -1,149 +1,53 @@
 "use client"
-import { logger } from "@/lib/logger"
-import { ProfileSchema } from "@/lib/schemas"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect } from "react"
 import { supabase } from "@/lib/supabase"
-import { clientApiGet, clientApiPatch } from "@/lib/api-client"
-import { Profile } from "@/lib/types"
+import { useProfileSettings } from "@/lib/hooks/useProfileSettings"
 import { Settings, User, Phone, Mail, Shield, CheckCircle2, AlertCircle, Key, Globe } from "lucide-react"
 
 export default function WarehouseSettings() {
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState("")
-  const [success, setSuccess] = useState("")
-
-  // Editable fields
-  const [fullName, setFullName] = useState("")
-  const [phone, setPhone] = useState("")
-  const [country, setCountry] = useState("")
-  const [region, setRegion] = useState("")
-
-  // Password change
-  const [newPassword, setNewPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [passwordSaving, setPasswordSaving] = useState(false)
-  const [passwordSuccess, setPasswordSuccess] = useState("")
-  const [passwordError, setPasswordError] = useState("")
-
-  // Notification preferences (client-side)
-  const [emailNotifs, setEmailNotifs] = useState(true)
-  const [bookingNotifs, setBookingNotifs] = useState(true)
-  const [temperatureAlerts, setTemperatureAlerts] = useState(true)
-  const [inboundTruckAlerts, setInboundTruckAlerts] = useState(true)
-
-  const fetchProfile = useCallback(async () => {
-    setLoading(true)
-    try {
-      const data = await clientApiGet<{ profile: Profile }>("profile")
-      if (data?.profile) {
-        const parsed = ProfileSchema.safeParse(data.profile)
-        if (parsed.success) {
-          setProfile(parsed.data as Profile)
-          setFullName(parsed.data.full_name || "")
-          setPhone(parsed.data.phone || "")
-          setCountry(parsed.data.country || "")
-          setRegion(parsed.data.region || "")
-        } else {
-          logger.warn("WarehouseSettings", "Invalid profile schema payload from API", parsed.error)
-          setProfile(data.profile)
-          setFullName(data.profile.full_name || "")
-          setPhone(data.profile.phone || "")
-          setCountry(data.profile.country || "")
-          setRegion(data.profile.region || "")
-        }
-      }
-    } catch (err) {
-      logger.error("DashboardWarehouseOwnerSettings", "Operation failed", err)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  const {
+    profile,
+    loading,
+    saving,
+    error,
+    success,
+    fullName,
+    setFullName,
+    phone,
+    setPhone,
+    country,
+    setCountry,
+    region,
+    setRegion,
+    newPassword,
+    setNewPassword,
+    confirmPassword,
+    setConfirmPassword,
+    passwordSaving,
+    passwordSuccess,
+    passwordError,
+    notifPrefs,
+    setNotifPrefs,
+    fetchProfile,
+    loadNotifPrefs,
+    handleSaveProfile,
+    handleChangePassword,
+    saveNotifPrefs,
+  } = useProfileSettings()
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         fetchProfile()
-        const stored = localStorage.getItem(`af_warehouse_notif_prefs_${session.user.id}`)
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          setEmailNotifs(parsed.emailNotifs ?? true)
-          setBookingNotifs(parsed.bookingNotifs ?? true)
-          setTemperatureAlerts(parsed.temperatureAlerts ?? true)
-          setInboundTruckAlerts(parsed.inboundTruckAlerts ?? true)
-        }
+        loadNotifPrefs(session.user.id)
       }
     })
-  }, [fetchProfile])
+  }, [fetchProfile, loadNotifPrefs])
 
-  const handleSaveProfile = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-    setSuccess("")
-    setSaving(true)
-
-    try {
-      const data = await clientApiPatch<{ profile: Profile }>("profile", {
-        full_name: fullName,
-        phone,
-        country,
-        region,
-      })
-
-      if (data?.profile) {
-        setProfile(data.profile)
-      }
-      setSuccess("Profile settings saved successfully!")
-      setTimeout(() => setSuccess(""), 4000)
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to update profile"
-      setError(msg)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setPasswordError("")
-    setPasswordSuccess("")
-
-    if (newPassword.length < 6) {
-      setPasswordError("Password must be at least 6 characters long.")
-      return
-    }
-    if (newPassword !== confirmPassword) {
-      setPasswordError("Passwords do not match.")
-      return
-    }
-
-    setPasswordSaving(true)
-    try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword })
-      if (error) throw new Error(error.message)
-
-      setPasswordSuccess("Password changed successfully!")
-      setNewPassword("")
-      setConfirmPassword("")
-      setTimeout(() => setPasswordSuccess(""), 4000)
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to change password"
-      setPasswordError(msg)
-    } finally {
-      setPasswordSaving(false)
-    }
-  }
-
-  const saveNotifPrefs = () => {
+  const handleNotifSubmit = () => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        const prefs = { emailNotifs, bookingNotifs, temperatureAlerts, inboundTruckAlerts }
-        localStorage.setItem(`af_warehouse_notif_prefs_${session.user.id}`, JSON.stringify(prefs))
-        setSuccess("Notification settings saved!")
-        setTimeout(() => setSuccess(""), 3000)
-      }
+      saveNotifPrefs(session?.user.id)
     })
   }
 
@@ -334,10 +238,10 @@ export default function WarehouseSettings() {
 
         <div className="space-y-4">
           {[
-            { label: "General Email Reports", desc: "Receive weekly facility statistics summaries", state: emailNotifs, setter: setEmailNotifs },
-            { label: "New Booking Notifications", desc: "Receive instant notifications when tenants request storage space", state: bookingNotifs, setter: setBookingNotifs },
-            { label: "Silo/Cold Room Temp alerts", desc: "Get critical alerts when silo moisture or cold room temperatures drift", state: temperatureAlerts, setter: setTemperatureAlerts },
-            { label: "Inbound Truck Manifest Alerts", desc: "Get notifications when cargo trucks enter dispatch zones", state: inboundTruckAlerts, setter: setInboundTruckAlerts },
+            { key: "emailNotifs" as const, label: "General Email Reports", desc: "Receive weekly facility statistics summaries" },
+            { key: "bookingNotifs" as const, label: "New Booking Notifications", desc: "Receive instant notifications when tenants request storage space" },
+            { key: "temperatureAlerts" as const, label: "Silo/Cold Room Temp alerts", desc: "Get critical alerts when silo moisture or cold room temperatures drift" },
+            { key: "inboundTruckAlerts" as const, label: "Inbound Truck Manifest Alerts", desc: "Get notifications when cargo trucks enter dispatch zones" },
           ].map((pref) => (
             <div key={pref.label} className="flex items-center justify-between bg-slate-900/60 rounded-lg p-4 border border-border/30">
               <div>
@@ -345,14 +249,15 @@ export default function WarehouseSettings() {
                 <span className="text-[10px] text-muted-foreground">{pref.desc}</span>
               </div>
               <button
-                onClick={() => pref.setter(!pref.state)}
+                type="button"
+                onClick={() => setNotifPrefs({ ...notifPrefs, [pref.key]: !notifPrefs[pref.key] })}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-                  pref.state ? "bg-primary" : "bg-slate-700"
+                  notifPrefs[pref.key] ? "bg-primary" : "bg-slate-700"
                 }`}
               >
                 <span
                   className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    pref.state ? "translate-x-6" : "translate-x-1"
+                    notifPrefs[pref.key] ? "translate-x-6" : "translate-x-1"
                   }`}
                 />
               </button>
@@ -361,7 +266,8 @@ export default function WarehouseSettings() {
         </div>
 
         <button
-          onClick={saveNotifPrefs}
+          type="button"
+          onClick={handleNotifSubmit}
           className="mt-5 bg-slate-800 hover:bg-slate-700/80 border border-border text-white font-semibold px-6 py-2.5 rounded-lg text-sm transition-all cursor-pointer"
         >
           Save Notification Preferences
