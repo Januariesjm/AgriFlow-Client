@@ -2,13 +2,29 @@
 import { logger } from "@/lib/logger"
 
 import { useEffect, useState, useCallback } from "react"
-import { supabase } from "@/lib/supabase"
-import { clientApiGet, clientApiPost, clientApiDelete } from "@/lib/api-client"
+import { useSession } from "@/lib/hooks/useSession"
+import { useResourceWithFallback } from "@/lib/hooks/useResourceWithFallback"
+import { clientApiGet } from "@/lib/api-client"
+import { ProductFormSchema, formatZodIssues } from "@/lib/schemas"
 import { Product, Farm } from "@/lib/types"
 import { Plus, Trash2, Sprout, ShoppingBag } from "lucide-react"
 
+const listMyProducts = () =>
+  clientApiGet<{ products: Product[] }>("products/my").then((data) => data?.products ?? [])
+
 export default function MyProducts() {
-  const [products, setProducts] = useState<Product[]>([])
+  const { session } = useSession()
+  const {
+    items: products,
+    loading,
+    error,
+    setError,
+    addResource,
+    deleteResource,
+  } = useResourceWithFallback<Product>("products", "af_farmer_products", [], undefined, {
+    listItems: listMyProducts,
+  })
+
   const [farms, setFarms] = useState<Farm[]>([])
 
   // Form states
@@ -25,20 +41,6 @@ export default function MyProducts() {
   const [qualityGrade, setQualityGrade] = useState("Ungraded")
   const [farmId, setFarmId] = useState("")
 
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
-
-  const fetchMyProducts = useCallback(async () => {
-    try {
-      const data = await clientApiGet<{ products: Product[] }>("products/my")
-      if (data?.products) {
-        setProducts(data.products)
-      }
-    } catch (err) {
-      logger.error("DashboardFarmerProducts", "Operation failed", err)
-    }
-  }, [])
-
   const fetchFarms = useCallback(async () => {
     try {
       const data = await clientApiGet<{ farms: Farm[] }>("farms")
@@ -51,66 +53,74 @@ export default function MyProducts() {
         }
       }
     } catch (err) {
-      logger.error("DashboardFarmerProducts", "Operation failed", err)
+      logger.error("DashboardFarmerProducts", "Failed to load farms", err)
     }
   }, [])
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        fetchMyProducts()
-        fetchFarms()
-      }
-    })
-  }, [fetchMyProducts, fetchFarms])
+    if (session) {
+      fetchFarms()
+    }
+  }, [session, fetchFarms])
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
     setError("")
 
+    const parsed = ProductFormSchema.safeParse({
+      name,
+      category,
+      description,
+      quantity,
+      unit,
+      price,
+      gpsLat,
+      gpsLng,
+      harvestDate,
+      qualityGrade,
+      farmId,
+    })
+    if (!parsed.success) {
+      setError(formatZodIssues(parsed.error))
+      return
+    }
+
     try {
-      const selectedFarm = farms.find((f) => f.id === farmId)
+      const selectedFarm = farms.find((f) => f.id === parsed.data.farmId)
       const country = selectedFarm?.country || "Kenya"
       const region = selectedFarm?.region || "Nakuru"
 
-      await clientApiPost("products", {
-        name,
-        category,
-        description,
-        quantity: Number(quantity),
-        unit,
-        price: Number(price),
-        country,
-        region,
-        gps_lat: Number(gpsLat),
-        gps_lng: Number(gpsLng),
-        harvest_date: harvestDate || undefined,
-        quality_grade: qualityGrade,
-        farm_id: farmId || undefined,
-      })
+      await addResource(
+        {
+          name: parsed.data.name,
+          category: parsed.data.category,
+          description: parsed.data.description,
+          quantity: parsed.data.quantity,
+          unit: parsed.data.unit,
+          price: parsed.data.price,
+          country,
+          region,
+          gps_lat: parsed.data.gpsLat,
+          gps_lng: parsed.data.gpsLng,
+          harvest_date: parsed.data.harvestDate || undefined,
+          quality_grade: parsed.data.qualityGrade,
+          farm_id: parsed.data.farmId || undefined,
+        },
+        "prod"
+      )
 
       setShowAddForm(false)
       setDescription("")
       setQuantity("")
       setPrice("")
-      fetchMyProducts()
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to create crop listing"
-      setError(msg)
-    } finally {
-      setLoading(false)
+      logger.error("DashboardFarmerProducts", "Failed to create crop listing", err)
     }
   }
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to remove this crop listing?")) return
-    try {
-      await clientApiDelete(`products/${id}`)
-      fetchMyProducts()
-    } catch (err) {
-      logger.error("DashboardFarmerProducts", "Operation failed", err)
-    }
+    await deleteResource(id)
   }
 
   return (

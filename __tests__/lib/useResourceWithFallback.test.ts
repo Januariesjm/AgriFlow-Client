@@ -129,6 +129,21 @@ describe("useResourceWithFallback", () => {
     expect(result.current.error).toBe("")
   })
 
+  test("uses a custom listItems fetcher when the endpoint wraps its payload", async () => {
+    const listItems = jest
+      .fn()
+      .mockResolvedValue([{ id: "wrapped-1", name: "Unwrapped Depot", capacity: 75 }])
+
+    const { result } = renderHook(() =>
+      useResourceWithFallback<Depot>("depots", "af_depots", SEED, undefined, { listItems })
+    )
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(listItems).toHaveBeenCalled()
+    expect(clientApiGet).not.toHaveBeenCalled()
+    expect(result.current.items.map((i) => i.id)).toEqual(["wrapped-1"])
+  })
+
   test("survives localStorage persistence failures without losing state", async () => {
     ;(clientApiGet as jest.Mock).mockResolvedValue([])
     ;(clientApiPost as jest.Mock).mockResolvedValue({ id: "d-3", name: "Quota Depot", capacity: 60 })

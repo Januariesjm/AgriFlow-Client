@@ -8,11 +8,17 @@ interface Identifiable {
   id: string
 }
 
+export interface ResourceOptions<T> {
+  /** Custom list fetcher for endpoints that wrap or reshape the collection payload. */
+  listItems?: () => Promise<T[]>
+}
+
 export function useResourceWithFallback<T extends Identifiable>(
   apiEndpoint: string,
   storageKeyPrefix: string,
   initialFallbackItems: T[] = [],
-  validator?: (item: unknown) => boolean
+  validator?: (item: unknown) => boolean,
+  options?: ResourceOptions<T>
 ) {
   const { session } = useSession()
   const [items, setItems] = useState<T[]>(initialFallbackItems)
@@ -32,6 +38,11 @@ export function useResourceWithFallback<T extends Identifiable>(
     fallbackRef.current = initialFallbackItems
   }, [initialFallbackItems])
 
+  const listItemsRef = useRef(options?.listItems)
+  useEffect(() => {
+    listItemsRef.current = options?.listItems
+  }, [options?.listItems])
+
   const getStorageKey = useCallback(() => {
     const userId = session?.user?.id || "guest"
     return `${storageKeyPrefix}_${userId}`
@@ -44,7 +55,7 @@ export function useResourceWithFallback<T extends Identifiable>(
     try {
       const data = await loadWithFallback<T[]>(
         key,
-        () => clientApiGet<T[]>(apiEndpoint),
+        () => (listItemsRef.current ? listItemsRef.current() : clientApiGet<T[]>(apiEndpoint)),
         fallbackRef.current,
         undefined,
         `useResourceWithFallback[${apiEndpoint}]`
@@ -86,7 +97,7 @@ export function useResourceWithFallback<T extends Identifiable>(
     }
   }
 
-  const addResource = async (payload: Omit<T, "id">, fallbackIdPrefix: string = "item") => {
+  const addResource = async (payload: Partial<Omit<T, "id">>, fallbackIdPrefix: string = "item") => {
     setLoading(true)
     setError("")
     setSuccess("")
