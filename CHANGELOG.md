@@ -5,6 +5,24 @@ All notable changes to the AgriFlow Client project will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-08-22
+
+### Added
+- Zod form boundary schemas (`FacilityFormSchema`, `ProductFormSchema`, `WarehouseFormSchema`) plus a `formatZodIssues` helper in `lib/schemas.ts`, with valid/invalid case coverage in `__tests__/lib/schemas.test.ts`.
+- Dedicated unit suites for `useResourceWithFallback` (`__tests__/lib/useResourceWithFallback.test.ts`) and the new `useFarmerLogistics` hook (`__tests__/lib/useFarmerLogistics.test.ts`) covering load, create, delete, and error paths.
+- Shared `StatusBanner` component (`components/ui/StatusBanner.tsx`) replacing hand-rolled success/error alert markup across dashboard pages.
+- Offline test guard and placeholder credentials in `jest.setup.ts`, so a fresh clone runs the suite with zero live accounts or network access.
+- `.dockerignore` and a CI container build verification job proving the production image builds on every push.
+
+### Changed
+- Farmer product listings (`app/dashboard/farmer/products/page.tsx`) now load and mutate through the shared `useResourceWithFallback` hook with `ProductFormSchema` validation instead of page-level fetch plumbing.
+- Farmer logistics data loading and transport booking extracted into `lib/hooks/useFarmerLogistics.ts`, leaving the page as pure rendering.
+- Warehouse facility and buyer warehouse forms validate through shared Zod schemas instead of ad-hoc `isNaN`/`trim` checks.
+- All remaining caret-ranged dependencies (`next`, `@supabase/supabase-js`, `eslint`, `eslint-config-next`) pinned to exact versions.
+
+### Fixed
+- `useResourceWithFallback` no longer refetches in a loop when callers pass inline array literals as fallback seed data.
+
 ## [0.3.0] - 2026-08-22
 
 ### Added
