@@ -5,7 +5,8 @@ import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 import { clientApiGet, clientApiPatch } from "@/lib/api-client"
 import { Profile } from "@/lib/types"
-import { Settings, User, Phone, Mail, Shield, CheckCircle2, AlertCircle, Key, Globe } from "lucide-react"
+import VendorSettingsForm from "@/components/vendor/VendorSettingsForm"
+import { Settings, Phone, Mail, Shield, CheckCircle2, AlertCircle, Key, Globe } from "lucide-react"
 
 export default function VendorSettings() {
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -195,71 +196,18 @@ export default function VendorSettings() {
       </div>
 
       {/* Personal Info Edit */}
-      <div className="glass p-8 rounded-xl">
-        <div className="flex items-center space-x-2.5 mb-6">
-          <User className="h-6 w-6 text-primary" />
-          <h3 className="text-xl font-bold text-white">Representative Details</h3>
-        </div>
-
-        <form onSubmit={handleSaveProfile} className="space-y-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-muted-foreground mb-1.5">Full Name</label>
-              <input
-                type="text"
-                required
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="w-full bg-slate-900 border border-border rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-muted-foreground mb-1.5">Phone Number</label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+254 700 000000"
-                className="w-full bg-slate-900 border border-border rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-muted-foreground mb-1.5">Country</label>
-              <select
-                value={country}
-                onChange={(e) => setCountry(e.target.value)}
-                className="w-full bg-slate-900 border border-border rounded-lg px-4 py-2.5 text-sm text-foreground focus:outline-none"
-              >
-                <option value="Kenya">Kenya</option>
-                <option value="Uganda">Uganda</option>
-                <option value="Tanzania">Tanzania</option>
-                <option value="Rwanda">Rwanda</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-muted-foreground mb-1.5">Region</label>
-              <input
-                type="text"
-                value={region}
-                onChange={(e) => setRegion(e.target.value)}
-                placeholder="Eldoret, Gulu, etc."
-                className="w-full bg-slate-900 border border-border rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none"
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={saving}
-            className="bg-primary hover:bg-primary/95 text-primary-foreground font-semibold px-6 py-2.5 rounded-lg text-sm transition-all cursor-pointer shadow disabled:opacity-50"
-          >
-            {saving ? "Saving changes..." : "Save Settings"}
-          </button>
-        </form>
-      </div>
+      <VendorSettingsForm
+        fullName={fullName}
+        onFullNameChange={setFullName}
+        phone={phone}
+        onPhoneChange={setPhone}
+        country={country}
+        onCountryChange={setCountry}
+        region={region}
+        onRegionChange={setRegion}
+        saving={saving}
+        onSave={handleSaveProfile}
+      />
 
       {/* Security */}
       <div className="glass p-8 rounded-xl">
