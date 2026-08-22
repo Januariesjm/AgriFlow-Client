@@ -5,12 +5,9 @@ import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import Header from "@/components/layout/header"
 import Footer from "@/components/layout/footer"
-import { logger } from "@/lib/logger"
 import { supabase } from "@/lib/supabase"
-import { api } from "@/lib/api"
-import { Product } from "@/lib/types"
-import { TransportCostEstimate, TransportCostEstimateSchema } from "@/lib/schemas"
-import { calculateCropTotal, calculateLandedCost, buildTransportCostQueryParams } from "@/lib/checkout"
+import { calculateCropTotal, calculateLandedCost } from "@/lib/checkout"
+import { useProductDetail } from "@/lib/hooks/useProductDetail"
 import { Session } from "@supabase/supabase-js"
 import { Sprout, MapPin, Scale, Calendar, ArrowLeft, Truck, DollarSign, ShieldAlert } from "lucide-react"
 
@@ -19,100 +16,39 @@ export default function ProductDetail() {
   const router = useRouter()
   const id = params.id as string
 
-  const [product, setProduct] = useState<Product | null>(null)
-  const [loading, setLoading] = useState(true)
   const [session, setSession] = useState<Session | null>(null)
-  const [orderQuantity, setOrderQuantity] = useState(1)
-  const [orderLoading, setOrderLoading] = useState(false)
-  const [orderError, setOrderError] = useState("")
-  const [orderSuccess, setOrderSuccess] = useState(false)
 
-  // Transport calculation state
-  const [buyerLat, setBuyerLat] = useState("-1.2921") // Nairobi default
-  const [buyerLng, setBuyerLng] = useState("36.8219")
-  const [transportCost, setTransportCost] = useState<number | null>(null)
-  const [distance, setDistance] = useState<number | null>(null)
-  const [calcLoading, setCalcLoading] = useState(false)
+  const {
+    product,
+    loading,
+    orderQuantity,
+    setOrderQuantity,
+    orderLoading,
+    orderError,
+    orderSuccess,
+    buyerLat,
+    setBuyerLat,
+    buyerLng,
+    setBuyerLng,
+    transportCost,
+    distance,
+    calcLoading,
+    fetchProduct,
+    calculateTransport,
+    handlePlaceOrder,
+  } = useProductDetail(id)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
       setSession(session)
     })
     fetchProduct()
-  }, [id])
+  }, [id, fetchProduct])
 
-  const fetchProduct = async () => {
-    try {
-      const data = await api.get<{ product?: Product }>(`products/${id}`)
-      if (data?.product) {
-        setProduct(data.product)
-      }
-    } catch (err: unknown) {
-      logger.error("ProductDetail", `Failed to fetch product ${id}`, err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const calculateTransport = async () => {
-    if (!product) return
-    setCalcLoading(true)
-    try {
-      const queryParams = buildTransportCostQueryParams(
-        product.gps_lat,
-        product.gps_lng,
-        buyerLat,
-        buyerLng,
-        orderQuantity
-      )
-
-      const data = await api.get<TransportCostEstimate>(`transport/cost?${queryParams.toString()}`)
-      const parsed = TransportCostEstimateSchema.safeParse(data)
-      if (parsed.success) {
-        setTransportCost(parsed.data.estimated_cost)
-        setDistance(parsed.data.distance_km)
-      } else if (data && typeof data.estimated_cost === "number") {
-        setTransportCost(data.estimated_cost)
-        setDistance(data.distance_km)
-      }
-    } catch (err: unknown) {
-      logger.warn("ProductDetail", "Failed to calculate transport cost", err)
-    } finally {
-      setCalcLoading(false)
-    }
-  }
-
-  const handlePlaceOrder = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!session) {
+  const onSubmitOrder = async (e: React.FormEvent) => {
+    const res = await handlePlaceOrder(session, e)
+    if (res?.redirectLogin) {
       router.push("/login")
-      return
-    }
-
-    if (!product) return
-
-    setOrderLoading(true)
-    setOrderError("")
-    try {
-      await api.post(
-        "orders",
-        {
-          product_id: product.id,
-          quantity: orderQuantity,
-          delivery_lat: Number(buyerLat),
-          delivery_lng: Number(buyerLng),
-          delivery_address: `Coordinates: ${buyerLat}, ${buyerLng}`,
-        },
-        session.access_token
-      )
-
-      setOrderSuccess(true)
-      fetchProduct()
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : "Order placement failed"
-      setOrderError(errorMessage)
-    } finally {
-      setOrderLoading(false)
     }
   }
 
@@ -281,7 +217,7 @@ export default function ProductDetail() {
                   </p>
                 </div>
               ) : (
-                <form onSubmit={handlePlaceOrder} className="space-y-5">
+                <form onSubmit={onSubmitOrder} className="space-y-5">
                   {orderError && (
                     <div className="bg-destructive/10 border border-destructive/30 text-destructive text-xs p-3 rounded-lg">
                       {orderError}
