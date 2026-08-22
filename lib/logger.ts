@@ -75,7 +75,16 @@ class Logger {
   }
 
   error(context: string | LogContext, message: string, error?: unknown, metadata?: Record<string, unknown>): LogEntry {
-    return this.log("error", context, message, error, metadata)
+    const entry = this.log("error", context, message, error, metadata)
+    if (typeof process !== "undefined" && process.env.ENABLE_ERROR_TRACKING === "true") {
+      try {
+        const { captureException } = require("./errorTracking")
+        captureException(error || new Error(message), { context, message, ...metadata })
+      } catch {
+        // Safe fallback if module not loaded
+      }
+    }
+    return entry
   }
 
   debug(context: string | LogContext, message: string, metadata?: Record<string, unknown>): LogEntry {

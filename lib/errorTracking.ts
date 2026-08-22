@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/nextjs"
 import { logger } from "./logger"
 
 export interface ErrorTrackingConfig {
@@ -16,13 +17,9 @@ export function initErrorTracking(config?: ErrorTrackingConfig): boolean {
   if (dsn || explicitEnable) {
     trackingEnabled = true
     isInitialized = true
-    logger.info("ErrorTracking", "Production error tracking initialized", {
-      environment: config?.environment || process.env.NODE_ENV || "development",
-    })
   } else {
     trackingEnabled = false
     isInitialized = true
-    logger.debug("ErrorTracking", "Error tracking disabled; defaulting to isolated no-op handler")
   }
 
   return trackingEnabled
@@ -33,13 +30,8 @@ export function captureException(error: unknown, context?: Record<string, unknow
     initErrorTracking()
   }
 
-  logger.error("ErrorTracking", "Exception captured", error, context)
-
   if (trackingEnabled) {
-    // Hooks for Sentry or third-party error tracking SDKs
-    if (typeof window !== "undefined" && (window as unknown as { Sentry?: { captureException: (e: unknown, c?: unknown) => void } }).Sentry) {
-      ;(window as unknown as { Sentry: { captureException: (e: unknown, c?: unknown) => void } }).Sentry.captureException(error, { extra: context })
-    }
+    Sentry.captureException(error, { extra: context })
   }
 }
 
