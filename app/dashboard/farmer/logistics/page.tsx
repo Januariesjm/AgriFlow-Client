@@ -2,7 +2,8 @@
 
 import { useState } from "react"
 import { useFarmerLogistics } from "@/lib/hooks/useFarmerLogistics"
-import { Truck, Navigation, CheckCircle2, AlertCircle, RefreshCw, Plus } from "lucide-react"
+import { Truck, Navigation, RefreshCw, Plus } from "lucide-react"
+import StatusBanner from "@/components/ui/StatusBanner"
 import RouteMap from "@/components/maps/RouteMap"
 
 export default function FarmerLogistics() {
@@ -47,19 +48,8 @@ export default function FarmerLogistics() {
         </p>
       </div>
 
-      {success && (
-        <div className="bg-green-500/10 border border-green-500/30 text-green-400 text-sm px-4 py-3 rounded-lg flex items-center space-x-2">
-          <CheckCircle2 className="h-5 w-5 text-green-400 shrink-0" />
-          <span>{success}</span>
-        </div>
-      )}
-
-      {error && (
-        <div className="bg-destructive/10 border border-destructive/30 text-destructive text-sm px-4 py-3 rounded-lg flex items-center space-x-2">
-          <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
+      <StatusBanner variant="success" message={success} withIcon />
+      <StatusBanner variant="error" message={error} withIcon />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Book Transporter Form */}

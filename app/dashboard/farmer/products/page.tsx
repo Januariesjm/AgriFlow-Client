@@ -7,6 +7,7 @@ import { useResourceWithFallback } from "@/lib/hooks/useResourceWithFallback"
 import { clientApiGet } from "@/lib/api-client"
 import { ProductFormSchema, formatZodIssues } from "@/lib/schemas"
 import { Product, Farm } from "@/lib/types"
+import StatusBanner from "@/components/ui/StatusBanner"
 import { Plus, Trash2, Sprout, ShoppingBag } from "lucide-react"
 
 const listMyProducts = () =>
@@ -155,11 +156,7 @@ export default function MyProducts() {
             <h3 className="text-xl font-bold text-white">List Future or Existing Harvest</h3>
           </div>
 
-          {error && (
-            <div className="bg-destructive/10 border border-destructive/30 text-destructive text-sm px-4 py-3 rounded-lg mb-6">
-              {error}
-            </div>
-          )}
+          <StatusBanner variant="error" message={error} className="mb-6" />
 
           <form onSubmit={handleCreate} className="space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

@@ -6,6 +6,7 @@ import { logger } from "@/lib/logger"
 import { FacilityFormSchema, formatZodIssues } from "@/lib/schemas"
 import { Facility } from "@/lib/types"
 import { Compass, Plus, Trash2, Globe, MapPin, Shield } from "lucide-react"
+import StatusBanner from "@/components/ui/StatusBanner"
 import PlaceAutocomplete from "@/components/maps/PlaceAutocomplete"
 import GoogleMap from "@/components/maps/GoogleMap"
 
@@ -108,17 +109,8 @@ export default function WarehouseFacilities() {
         </p>
       </div>
 
-      {success && (
-        <div className="bg-green-500/10 border border-green-500/30 text-green-400 text-sm px-4 py-3 rounded-lg">
-          {success}
-        </div>
-      )}
-
-      {error && (
-        <div className="bg-destructive/10 border border-destructive/30 text-destructive text-sm px-4 py-3 rounded-lg">
-          {error}
-        </div>
-      )}
+      <StatusBanner variant="success" message={success} />
+      <StatusBanner variant="error" message={error} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Register Facility Form */}

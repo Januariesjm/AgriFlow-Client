@@ -6,7 +6,8 @@ import { logger } from "@/lib/logger"
 import { Warehouse } from "@/lib/types"
 import { WarehouseSchema, WarehouseFormSchema, formatZodIssues } from "@/lib/schemas"
 import WarehouseKpis from "@/components/warehouses/WarehouseKpis"
-import { Compass, CheckCircle, Plus, Trash2 } from "lucide-react"
+import StatusBanner from "@/components/ui/StatusBanner"
+import { Compass, Plus, Trash2 } from "lucide-react"
 
 const DEFAULT_WAREHOUSES: Warehouse[] = [
   {
@@ -109,18 +110,8 @@ export default function MyWarehouses() {
       {/* KPI Cards */}
       <WarehouseKpis warehouses={warehouses} />
 
-      {success && (
-        <div className="bg-green-500/10 border border-green-500/30 text-green-400 text-sm px-4 py-3 rounded-lg flex items-center space-x-2">
-          <CheckCircle className="h-5 w-5 text-green-400 shrink-0" />
-          <span>{success}</span>
-        </div>
-      )}
-
-      {error && (
-        <div className="bg-destructive/10 border border-destructive/30 text-destructive text-sm px-4 py-3 rounded-lg">
-          {error}
-        </div>
-      )}
+      <StatusBanner variant="success" message={success} withIcon />
+      <StatusBanner variant="error" message={error} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Register Warehouse Form */}
