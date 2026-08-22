@@ -32,6 +32,9 @@ Ensure the following keys are populated in your `.env.local`:
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase Anonymous Public Key
 - `NEXT_PUBLIC_API_BASE_URL`: AgriFlow Backend API URL (default: `http://localhost:4000/api`)
 - `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`: Google Maps JavaScript API Key
+- `ENABLE_ERROR_TRACKING`: Flag to toggle production Sentry error telemetry (`true` / `false`)
+- `NEXT_PUBLIC_SENTRY_DSN`: Sentry DSN endpoint URL for error reporting
+- `NODE_ENV`: Application runtime mode (`development`, `test`, `production`)
 
 ### 2. Development Server
 
