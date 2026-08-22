@@ -8,11 +8,12 @@ export async function loadWithFallback<T>(
   storageKey: string,
   fetchFn: () => Promise<T>,
   seedData: T,
+  validator?: (data: T) => boolean,
   context = "StorageFallback"
 ): Promise<T> {
   try {
     const remoteData = await fetchFn()
-    if (remoteData !== undefined && remoteData !== null) {
+    if (remoteData !== undefined && remoteData !== null && (!validator || validator(remoteData))) {
       try {
         if (typeof window !== "undefined") {
           localStorage.setItem(storageKey, JSON.stringify(remoteData))

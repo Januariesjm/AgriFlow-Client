@@ -19,6 +19,7 @@ const customJestConfig = {
   collectCoverageFrom: [
     "app/page.tsx",
     "app/error.tsx",
+    "app/api/health/route.ts",
     "app/(public)/sell/page.tsx",
     "app/(public)/equipments/page.tsx",
     "app/(public)/plant-next/page.tsx",
@@ -32,6 +33,8 @@ const customJestConfig = {
     "components/layout/header.tsx",
     "components/layout/footer.tsx",
     "components/calendar/CalendarBoard.tsx",
+    "components/calendar/CalendarGrid.tsx",
+    "components/warehouses/WarehouseKpis.tsx",
     "lib/admin.ts",
     "lib/api.ts",
     "lib/api-client.ts",
