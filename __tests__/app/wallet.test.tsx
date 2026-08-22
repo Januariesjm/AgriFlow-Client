@@ -38,7 +38,7 @@ describe("FarmerWallet Component", () => {
     expect(screen.getByText("Available for Cashout")).toBeInTheDocument()
 
     await waitFor(() => {
-      expect(screen.getByText("Withdrawal Disburse History")).toBeInTheDocument()
+      expect(screen.getByText("Outbound Withdrawal History")).toBeInTheDocument()
       expect(screen.getByText("Inbound Deposit & Escrow Ledger")).toBeInTheDocument()
     })
   })

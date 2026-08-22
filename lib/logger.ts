@@ -1,9 +1,18 @@
 export type LogLevel = "info" | "warn" | "error" | "debug"
 
+export interface LogContext {
+  module: string
+  action?: string
+  userId?: string
+  metadata?: Record<string, unknown>
+}
+
 export interface LogEntry {
   timestamp: string
   level: LogLevel
   module: string
+  action?: string
+  userId?: string
   message: string
   error?: Record<string, unknown> | string
   metadata?: Record<string, unknown>
@@ -24,23 +33,31 @@ class Logger {
 
   private createLogEntry(
     level: LogLevel,
-    moduleName: string,
+    context: string | LogContext,
     message: string,
     error?: unknown,
     metadata?: Record<string, unknown>
   ): LogEntry {
+    const isContextObj = typeof context === "object" && context !== null
+    const moduleName = isContextObj ? context.module : context
+    const action = isContextObj ? context.action : undefined
+    const userId = isContextObj ? context.userId : undefined
+    const combinedMetadata = isContextObj && context.metadata ? { ...context.metadata, ...metadata } : metadata
+
     return {
       timestamp: new Date().toISOString(),
       level,
       module: moduleName,
+      ...(action && { action }),
+      ...(userId && { userId }),
       message,
       ...(error !== undefined && { error: this.formatError(error) }),
-      ...(metadata && { metadata }),
+      ...(combinedMetadata && Object.keys(combinedMetadata).length > 0 && { metadata: combinedMetadata }),
     }
   }
 
-  log(level: LogLevel, moduleName: string, message: string, error?: unknown, metadata?: Record<string, unknown>): LogEntry {
-    const entry = this.createLogEntry(level, moduleName, message, error, metadata)
+  log(level: LogLevel, context: string | LogContext, message: string, error?: unknown, metadata?: Record<string, unknown>): LogEntry {
+    const entry = this.createLogEntry(level, context, message, error, metadata)
     
     // Emit structured JSON object
     const consoleMethod = level === "error" ? console.error : level === "warn" ? console.warn : console.log
@@ -49,21 +66,22 @@ class Logger {
     return entry
   }
 
-  info(moduleName: string, message: string, metadata?: Record<string, unknown>): LogEntry {
-    return this.log("info", moduleName, message, undefined, metadata)
+  info(context: string | LogContext, message: string, metadata?: Record<string, unknown>): LogEntry {
+    return this.log("info", context, message, undefined, metadata)
   }
 
-  warn(moduleName: string, message: string, error?: unknown, metadata?: Record<string, unknown>): LogEntry {
-    return this.log("warn", moduleName, message, error, metadata)
+  warn(context: string | LogContext, message: string, error?: unknown, metadata?: Record<string, unknown>): LogEntry {
+    return this.log("warn", context, message, error, metadata)
   }
 
-  error(moduleName: string, message: string, error?: unknown, metadata?: Record<string, unknown>): LogEntry {
-    return this.log("error", moduleName, message, error, metadata)
+  error(context: string | LogContext, message: string, error?: unknown, metadata?: Record<string, unknown>): LogEntry {
+    return this.log("error", context, message, error, metadata)
   }
 
-  debug(moduleName: string, message: string, metadata?: Record<string, unknown>): LogEntry {
-    return this.log("debug", moduleName, message, undefined, metadata)
+  debug(context: string | LogContext, message: string, metadata?: Record<string, unknown>): LogEntry {
+    return this.log("debug", context, message, undefined, metadata)
   }
 }
 
 export const logger = new Logger()
+

@@ -1,6 +1,6 @@
 import { logger } from "@/lib/logger"
 
-describe("Structured Logger Service", () => {
+describe("Logger", () => {
   let consoleLogSpy: jest.SpyInstance
   let consoleWarnSpy: jest.SpyInstance
   let consoleErrorSpy: jest.SpyInstance
@@ -15,56 +15,50 @@ describe("Structured Logger Service", () => {
     jest.restoreAllMocks()
   })
 
-  test("emits formatted info entry as structured JSON string", () => {
-    const entry = logger.info("TestModule", "Test info message", { user: "123" })
-
+  test("logs info message with string module name", () => {
+    const entry = logger.info("TestModule", "Operation succeeded")
     expect(entry.level).toBe("info")
     expect(entry.module).toBe("TestModule")
-    expect(entry.message).toBe("Test info message")
-    expect(entry.metadata).toEqual({ user: "123" })
-
-    const expectedJson = JSON.stringify(entry)
-    expect(consoleLogSpy).toHaveBeenCalledWith(expectedJson)
+    expect(entry.message).toBe("Operation succeeded")
+    expect(consoleLogSpy).toHaveBeenCalledWith(JSON.stringify(entry))
   })
 
-  test("emits formatted warn entry with error details", () => {
-    const err = new Error("Warning cause")
-    const entry = logger.warn("WarnModule", "Something is unusual", err)
+  test("logs warn message with structured context object", () => {
+    const context = {
+      module: "WarehouseModule",
+      action: "FETCH_INVENTORY",
+      userId: "user-456",
+      metadata: { region: "Eldoret" },
+    }
+    const entry = logger.warn(context, "Inventory fetch retry", new Error("Timeout"))
 
     expect(entry.level).toBe("warn")
-    expect(entry.error).toEqual(
-      expect.objectContaining({
-        name: "Error",
-        message: "Warning cause",
-      })
-    )
-
-    const expectedJson = JSON.stringify(entry)
-    expect(consoleWarnSpy).toHaveBeenCalledWith(expectedJson)
+    expect(entry.module).toBe("WarehouseModule")
+    expect(entry.action).toBe("FETCH_INVENTORY")
+    expect(entry.userId).toBe("user-456")
+    expect(entry.message).toBe("Inventory fetch retry")
+    expect(entry.metadata).toEqual({ region: "Eldoret" })
+    expect(entry.error).toMatchObject({ name: "Error", message: "Timeout" })
+    expect(consoleWarnSpy).toHaveBeenCalledWith(JSON.stringify(entry))
   })
 
-  test("emits formatted error entry with stack trace", () => {
-    const err = new TypeError("Failed to load network resource")
-    const entry = logger.error("APIModule", "Network error occurred", err)
+  test("logs error message with error object", () => {
+    const err = new Error("Database connection lost")
+    const entry = logger.error("DBModule", "Query failed", err)
 
     expect(entry.level).toBe("error")
-    expect(entry.module).toBe("APIModule")
-    expect(entry.error).toEqual(
-      expect.objectContaining({
-        name: "TypeError",
-        message: "Failed to load network resource",
-      })
-    )
-
-    const expectedJson = JSON.stringify(entry)
-    expect(consoleErrorSpy).toHaveBeenCalledWith(expectedJson)
+    expect(entry.module).toBe("DBModule")
+    expect(entry.error).toMatchObject({
+      name: "Error",
+      message: "Database connection lost",
+    })
+    expect(consoleErrorSpy).toHaveBeenCalledWith(JSON.stringify(entry))
   })
 
-  test("emits debug log entries", () => {
-    const entry = logger.debug("DebugModule", "Debugging state transition")
-
+  test("logs debug message", () => {
+    const entry = logger.debug("AuthModule", "Token refresh triggered")
     expect(entry.level).toBe("debug")
-    const expectedJson = JSON.stringify(entry)
-    expect(consoleLogSpy).toHaveBeenCalledWith(expectedJson)
+    expect(entry.module).toBe("AuthModule")
+    expect(consoleLogSpy).toHaveBeenCalledWith(JSON.stringify(entry))
   })
 })
