@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from "@testing-library/react"
+import { Sprout } from "lucide-react"
 import CalendarGrid from "@/components/calendar/CalendarGrid"
 
 describe("CalendarGrid Component", () => {
@@ -20,7 +21,7 @@ describe("CalendarGrid Component", () => {
     calendarDays: [null, null, 1, 2, 3, 4, 5, 15],
     getEventsForDay: (day: number) => (day === 15 ? mockEvents : []),
     eventTypes: [
-      { value: "planting", label: "Planting", icon: () => null, color: "bg-green-500" },
+      { value: "planting", label: "Planting", icon: Sprout, color: "bg-green-500" },
     ],
     onPrevMonth: jest.fn(),
     onNextMonth: jest.fn(),

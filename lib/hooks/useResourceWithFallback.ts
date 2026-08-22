@@ -39,6 +39,7 @@ export function useResourceWithFallback<T extends Identifiable>(
         key,
         () => clientApiGet<T[]>(apiEndpoint),
         initialFallbackItems,
+        undefined,
         `useResourceWithFallback[${apiEndpoint}]`
       )
       const currentValidator = validatorRef.current
