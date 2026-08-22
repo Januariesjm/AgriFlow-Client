@@ -79,6 +79,28 @@ describe("Buyer MyWarehouses Component", () => {
     })
   })
 
+  test("surfaces schema validation issues for invalid capacity", async () => {
+    render(<MyWarehouses />)
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    fireEvent.change(screen.getByPlaceholderText("Mombasa Port Transit Terminal"), { target: { value: "Depot X" } })
+    fireEvent.change(screen.getByPlaceholderText("Shimanzi Road, Mombasa"), { target: { value: "Mombasa" } })
+    fireEvent.change(screen.getByPlaceholderText("250"), { target: { value: "-10" } })
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Add Warehouse Depot" }))
+      await Promise.resolve()
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText(/Please enter a valid capacity in tons\./)).toBeInTheDocument()
+    })
+    expect(clientApiPost).not.toHaveBeenCalled()
+  })
+
   test("deletes warehouse node when user confirms", async () => {
     window.confirm = jest.fn().mockReturnValue(true)
     render(<MyWarehouses />)

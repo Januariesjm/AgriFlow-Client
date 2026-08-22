@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useResourceWithFallback } from "@/lib/hooks/useResourceWithFallback"
 import { logger } from "@/lib/logger"
 import { Warehouse } from "@/lib/types"
-import { WarehouseSchema } from "@/lib/schemas"
+import { WarehouseSchema, WarehouseFormSchema, formatZodIssues } from "@/lib/schemas"
 import WarehouseKpis from "@/components/warehouses/WarehouseKpis"
 import { Compass, CheckCircle, Plus, Trash2 } from "lucide-react"
 
@@ -51,30 +51,29 @@ export default function MyWarehouses() {
     e.preventDefault()
 
     try {
-      if (!name.trim() || !location.trim()) {
-        throw new Error("Warehouse name and location are required.")
-      }
-
-      const capVal = Number(capacity)
-      if (isNaN(capVal) || capVal <= 0) {
-        throw new Error("Please enter a valid capacity in tons.")
-      }
-
-      const latVal = Number(gpsLat)
-      const lngVal = Number(gpsLng)
-      if (isNaN(latVal) || isNaN(lngVal)) {
-        throw new Error("Please enter valid numeric GPS coordinates.")
+      const parsed = WarehouseFormSchema.safeParse({
+        name,
+        location,
+        capacity,
+        storageType,
+        gpsLat,
+        gpsLng,
+        status,
+      })
+      if (!parsed.success) {
+        setError(formatZodIssues(parsed.error))
+        return
       }
 
       await addResource(
         {
-          name,
-          location,
-          capacity: capVal,
-          storageType,
-          gpsLat: latVal,
-          gpsLng: lngVal,
-          status,
+          name: parsed.data.name,
+          location: parsed.data.location,
+          capacity: parsed.data.capacity,
+          storageType: parsed.data.storageType,
+          gpsLat: parsed.data.gpsLat,
+          gpsLng: parsed.data.gpsLng,
+          status: parsed.data.status,
           createdAt: new Date().toISOString(),
         },
         "wh"
