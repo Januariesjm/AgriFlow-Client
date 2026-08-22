@@ -71,7 +71,9 @@ AgriFlow Client enforces strict quality gates covering type safety, linting, and
 npm test
 ```
 
-Runs the Jest test suite with coverage report generation and threshold verification (60% global coverage).
+Runs the Jest test suite with coverage report generation and threshold verification (60% global coverage, enforced via `coverageThreshold` in `jest.config.js` — the run exits non-zero below the bar).
+
+The suite is fully self-contained: placeholder credentials are injected in `jest.setup.ts` and an offline guard rejects any unmocked network request, so a fresh clone runs `npm ci && npm test` green with no Supabase project, backend API, or Google Maps key.
 
 ### Run TypeScript Type Check
 
