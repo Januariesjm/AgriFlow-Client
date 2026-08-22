@@ -5,6 +5,13 @@ import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 import { clientApiGet } from "@/lib/api-client"
 import { Order, Product } from "@/lib/types"
+import {
+  calculateMonthlyRevenue,
+  calculateCategoryBreakdown,
+  calculateTopProducts,
+  calculateTopBuyers,
+  calculateInventoryHealth,
+} from "@/lib/calculations/analytics"
 import { BarChart3, TrendingUp, PieChart, Package } from "lucide-react"
 
 export default function FarmerAnalytics() {
@@ -51,33 +58,11 @@ export default function FarmerAnalytics() {
   const avgOrderValue = nonCancelledOrders.length > 0 ? totalOrderValue / nonCancelledOrders.length : 0
   const conversionRate = orders.length > 0 ? (deliveredOrders.length / orders.length) * 100 : 0
 
-  // Revenue by month (last 6 months)
-  const monthlyRevenue: { label: string; value: number }[] = []
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date()
-    d.setMonth(d.getMonth() - i)
-    const month = d.toLocaleString("default", { month: "short" })
-    const year = d.getFullYear()
-    const monthNum = d.getMonth()
-    const sum = deliveredOrders
-      .filter((o) => {
-        const od = new Date(o.created_at)
-        return od.getMonth() === monthNum && od.getFullYear() === year
-      })
-      .reduce((s, o) => s + (o.total_price || 0), 0)
-    monthlyRevenue.push({ label: `${month}`, value: sum })
-  }
+  // Delegated calculations
+  const monthlyRevenue = calculateMonthlyRevenue(orders)
   const maxMonthlyRevenue = Math.max(...monthlyRevenue.map((m) => m.value), 1)
 
-  // Revenue by category
-  const categoryMap = new Map<string, number>()
-  nonCancelledOrders.forEach((o) => {
-    const cat = o.product?.category || "Unknown"
-    categoryMap.set(cat, (categoryMap.get(cat) || 0) + (o.total_price || 0))
-  })
-  const categoryBreakdown = Array.from(categoryMap.entries())
-    .map(([category, revenue]) => ({ category, revenue }))
-    .sort((a, b) => b.revenue - a.revenue)
+  const categoryBreakdown = calculateCategoryBreakdown(orders)
   const totalCategoryRevenue = categoryBreakdown.reduce((s, c) => s + c.revenue, 0) || 1
 
   const categoryColors = [
@@ -85,36 +70,9 @@ export default function FarmerAnalytics() {
     "bg-pink-500", "bg-cyan-500", "bg-violet-500", "bg-orange-500",
   ]
 
-  // Top selling products
-  const productSales = new Map<string, { name: string; orders: number; revenue: number }>()
-  nonCancelledOrders.forEach((o) => {
-    const name = o.product?.name || "Unknown"
-    const existing = productSales.get(name) || { name, orders: 0, revenue: 0 }
-    existing.orders += 1
-    existing.revenue += o.total_price || 0
-    productSales.set(name, existing)
-  })
-  const topProducts = Array.from(productSales.values())
-    .sort((a, b) => b.revenue - a.revenue)
-    .slice(0, 6)
-
-  // Top buyers
-  const buyerMap = new Map<string, { name: string; orders: number; spent: number }>()
-  nonCancelledOrders.forEach((o) => {
-    const name = o.buyer?.full_name || "Anonymous"
-    const existing = buyerMap.get(name) || { name, orders: 0, spent: 0 }
-    existing.orders += 1
-    existing.spent += o.total_price || 0
-    buyerMap.set(name, existing)
-  })
-  const topBuyers = Array.from(buyerMap.values())
-    .sort((a, b) => b.spent - a.spent)
-    .slice(0, 5)
-
-  // Inventory health
-  const activeProducts = products.filter((p) => p.status === "active")
-  const soldOutProducts = products.filter((p) => p.status === "sold")
-  const lowStockProducts = activeProducts.filter((p) => p.quantity <= 5)
+  const topProducts = calculateTopProducts(orders)
+  const topBuyers = calculateTopBuyers(orders)
+  const { activeProducts, soldOutProducts, lowStockProducts } = calculateInventoryHealth(products)
 
   if (loading) {
     return (
