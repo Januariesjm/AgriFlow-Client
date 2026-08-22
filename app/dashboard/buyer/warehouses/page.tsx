@@ -94,9 +94,6 @@ export default function MyWarehouses() {
     await deleteResource(id)
   }
 
-  const totalCapacity = warehouses.reduce((sum, w) => sum + w.capacity, 0)
-  const activeNodes = warehouses.filter((w) => w.status === "active").length
-
   return (
     <div className="space-y-8">
       <div>
