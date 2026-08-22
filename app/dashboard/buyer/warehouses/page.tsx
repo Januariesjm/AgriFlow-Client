@@ -5,7 +5,8 @@ import { useResourceWithFallback } from "@/lib/hooks/useResourceWithFallback"
 import { logger } from "@/lib/logger"
 import { Warehouse } from "@/lib/types"
 import { WarehouseSchema } from "@/lib/schemas"
-import { Compass, CheckCircle, Plus, Trash2, Home, BarChart } from "lucide-react"
+import WarehouseKpis from "@/components/warehouses/WarehouseKpis"
+import { Compass, CheckCircle, Plus, Trash2 } from "lucide-react"
 
 const DEFAULT_WAREHOUSES: Warehouse[] = [
   {
@@ -110,48 +111,7 @@ export default function MyWarehouses() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="glass p-6 rounded-xl border border-primary/20 relative overflow-hidden">
-          <div className="flex justify-between items-start">
-            <div>
-              <span className="text-xs text-primary font-bold uppercase tracking-wider block">Active Hubs</span>
-              <h3 className="text-3xl font-black text-white mt-1">{activeNodes}</h3>
-              <p className="text-xs text-muted-foreground mt-1">Receiving inbound dispatches.</p>
-            </div>
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Home className="h-5 w-5 text-primary" />
-            </div>
-          </div>
-        </div>
-
-        <div className="glass p-6 rounded-xl border border-secondary/20 relative overflow-hidden">
-          <div className="flex justify-between items-start">
-            <div>
-              <span className="text-xs text-secondary font-bold uppercase tracking-wider block">Total Network Capacity</span>
-              <h3 className="text-3xl font-black text-white mt-1">{totalCapacity} Tons</h3>
-              <p className="text-xs text-muted-foreground mt-1">Storage capability across all depots.</p>
-            </div>
-            <div className="h-10 w-10 rounded-lg bg-secondary/10 flex items-center justify-center">
-              <BarChart className="h-5 w-5 text-secondary" />
-            </div>
-          </div>
-        </div>
-
-        <div className="glass p-6 rounded-xl border border-border/40 relative overflow-hidden">
-          <div className="flex justify-between items-start">
-            <div>
-              <span className="text-xs text-muted-foreground font-bold uppercase tracking-wider block">Default Hub</span>
-              <h3 className="text-xl font-bold text-white mt-2 truncate max-w-[200px]">
-                {warehouses.length > 0 ? warehouses[0].name : "None configured"}
-              </h3>
-              <p className="text-xs text-muted-foreground mt-1">Primary landing depot for orders.</p>
-            </div>
-            <div className="h-10 w-10 rounded-lg bg-slate-800 flex items-center justify-center">
-              <Compass className="h-5 w-5 text-muted-foreground" />
-            </div>
-          </div>
-        </div>
-      </div>
+      <WarehouseKpis warehouses={warehouses} />
 
       {success && (
         <div className="bg-green-500/10 border border-green-500/30 text-green-400 text-sm px-4 py-3 rounded-lg flex items-center space-x-2">
