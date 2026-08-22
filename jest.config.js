@@ -57,6 +57,7 @@ const customJestConfig = {
     "!**/*.d.ts",
     "!**/node_modules/**",
   ],
+  // Enforce explicit 60% quality gate for global branches, functions, lines, and statements
   coverageThreshold: {
     global: {
       branches: 60,
