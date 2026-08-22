@@ -43,8 +43,8 @@ describe("FarmerAnalytics Page Component", () => {
   ]
 
   const mockProducts = [
-    { id: "p-1", name: "Yellow Corn", category: "Grains", quantity: 50, status: "active" },
-    { id: "p-2", name: "Red Beans", category: "Legumes", quantity: 3, status: "active" },
+    { id: "p-1", name: "Yellow Corn", category: "Grains", quantity: 50, unit: "Bag", status: "active" },
+    { id: "p-2", name: "Red Beans", category: "Legumes", quantity: 3, unit: "Bag", status: "active" },
   ]
 
   beforeEach(() => {
@@ -66,9 +66,8 @@ describe("FarmerAnalytics Page Component", () => {
   test("renders analytics heading and computes KPIs correctly", async () => {
     render(<FarmerAnalytics />)
 
-    expect(screen.getByText("Analytics & Reports")).toBeInTheDocument()
-
     await waitFor(() => {
+      expect(screen.getByText("Analytics & Reports")).toBeInTheDocument()
       expect(screen.getByText("Total Revenue")).toBeInTheDocument()
       expect(screen.getByText("$1200.00")).toBeInTheDocument()
       expect(screen.getByText("Avg. Order Value")).toBeInTheDocument()

@@ -95,7 +95,7 @@ export const ProfileSchema = z.object({
   region: z.string().optional(),
   gps_lat: z.number().optional(),
   gps_lng: z.number().optional(),
-  is_verified: z.boolean(),
+  is_verified: z.boolean().optional(),
   created_at: z.string(),
   updated_at: z.string().optional(),
 })

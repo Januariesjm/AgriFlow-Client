@@ -5,22 +5,18 @@ All notable changes to the AgriFlow Client project will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.0] - 2026-08-22
 
 ### Added
-- Pure calculation services: `lib/calculations/wallet.ts` (wallet balances/limits) and `lib/calculations/checkout.ts` (gross/net sell earnings math).
-- Unit test suites for pure calculation logic (`__tests__/lib/wallet-calculations.test.ts` & `__tests__/lib/sell-calculations.test.ts`).
-- Component integration test suites for `FarmerAnalytics` (`__tests__/app/farmer-analytics.test.tsx`) and `WarehouseWallet` (`__tests__/app/wallet-warehouse.test.tsx`).
-- Component unit test suites for `FarmerWallet` (`__tests__/app/wallet-farmer.test.tsx`) and `WarehouseSettings` (`__tests__/app/warehouse-settings.test.tsx`).
-- Global client Error Boundary (`app/error.tsx`) logging rendering exceptions via structured telemetry.
+- Extended structured logging in `lib/logger.ts` to support `LogContext` objects (`module`, `action`, `userId`, `metadata`) and added unit test assertions in `__tests__/lib/logger.test.ts`.
+- Introduced production error tracking module `lib/errorTracking.ts` with optional Sentry SDK integration and isolated no-op fallback, backed by unit tests in `__tests__/lib/errorTracking.test.ts`.
+- Extracted business logic custom hook `lib/hooks/useProfileSettings.ts` with strict Zod validation, backed by unit test suite `__tests__/lib/useProfileSettings.test.ts`.
+- Extracted product page state management into custom hook `lib/hooks/useProductDetail.ts`, backed by unit test suite `__tests__/lib/useProductDetail.test.ts`.
+- Added page component integration test suites for `FarmerAnalytics` (`__tests__/pages/farmer-analytics.test.tsx`) and `FarmerLogistics` (`__tests__/pages/farmer-logistics.test.tsx`).
+- Restructured GitHub Actions CI workflow (`.github/workflows/ci.yml`) into explicit `lint`, `typecheck`, `test`, and `build` jobs to ensure proper automated merge gating.
+- Pinned dependency versions to published stable releases (`Next.js 15.1.8`, `React 19.0.0`, `Zod 3.24.2`, `lucide-react 0.475.0`).
 
-### Changed
-- Refactored `lib/logger.ts` to output structured JSON format (`timestamp`, `level`, `module`, `message`, `error`, `metadata`).
-- Enforced top-level 60% Jest coverage threshold in `jest.config.js`.
-- Current CI coverage metrics: **91.22% Statements**, **72.36% Branches**, **63.30% Functions**, **91.22% Lines** across 21 passed test suites (90 unit tests).
-- Modularized `.github/workflows/ci.yml` into parallel `lint-and-typecheck` and `test-with-coverage` jobs with Next.js build cache (`.next/cache`).
-
-## [0.1.0] - 2026-08-21
+## [0.2.0] - 2026-08-21
 
 ### Added
 - Testing infrastructure with Jest and React Testing Library.
