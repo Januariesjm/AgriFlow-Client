@@ -35,6 +35,7 @@ const customJestConfig = {
     "components/layout/footer.tsx",
     "components/calendar/CalendarBoard.tsx",
     "components/calendar/CalendarGrid.tsx",
+    "components/sell/SellCalculator.tsx",
     "components/warehouses/WarehouseKpis.tsx",
     "lib/admin.ts",
     "lib/api.ts",
