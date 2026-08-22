@@ -32,7 +32,7 @@ export function getSystemMetrics(): MetricsResponse {
       rss: memory.rss,
       heapTotal: memory.heapTotal,
       heapUsed: memory.heapUsed,
-      external: memory.external,
+      external: "external" in memory ? memory.external : undefined,
     },
   }
 }
