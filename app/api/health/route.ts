@@ -1,3 +1,5 @@
+import { NextResponse } from "next/server"
+
 export interface HealthResponse {
   status: string
   timestamp: string
@@ -14,16 +16,15 @@ export function getHealthStatus(): HealthResponse {
     service: "agriflow-client",
     version: "0.3.0",
     environment: process.env.NODE_ENV || "development",
-    uptime: process.uptime(),
+    uptime: typeof process !== "undefined" && typeof process.uptime === "function" ? process.uptime() : 0,
   }
 }
 
 export async function GET() {
   const healthData = getHealthStatus()
-  return new Response(JSON.stringify(healthData), {
+  return NextResponse.json(healthData, {
     status: 200,
     headers: {
-      "Content-Type": "application/json",
       "Cache-Control": "no-store, no-cache, must-revalidate",
     },
   })

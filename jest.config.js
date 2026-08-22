@@ -20,6 +20,7 @@ const customJestConfig = {
     "app/page.tsx",
     "app/error.tsx",
     "app/api/health/route.ts",
+    "app/api/metrics/route.ts",
     "app/(public)/sell/page.tsx",
     "app/(public)/equipments/page.tsx",
     "app/(public)/plant-next/page.tsx",
